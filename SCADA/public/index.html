@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOLINO — Supervisión SCADA y Control de Llenado de Celdas</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- BARRA SUPERIOR -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>MOLINO — LLENADO DE CELDAS</h1>
+          <small>UTN Paraná · Alumno: Hugo Ariel Martinez · SCADA Industrial v2.0</small>
+        </div>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab active" data-view="proceso" id="tab-proceso">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Proceso
+        </button>
+        <button class="tab" data-view="alarmas" id="tab-alarmas">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Alarmas
+          <span class="badge" id="badge-alarmas" hidden>0</span>
+        </button>
+      </nav>
+
+      <div class="top-right">
+        <!-- Control de Bocina / Sonido de Planta -->
+        <button class="pill" id="btn-toggle-sound" title="Habilitar / Silenciar Sonido de Bocina Industrial">
+          <span id="ico-sound">🔊</span>
+          <span id="txt-sound">Bocina: ON</span>
+        </button>
+
+        <!-- Indicador de Comunicación y Modo -->
+        <button class="pill" id="btn-conn-info" title="Configurar conexión Modbus">
+          <span class="dot" id="dot-comm"></span>
+          <span id="txt-conn-target">PLC: Conectando...</span>
+          <span class="mono" id="txt-latency" style="font-size: 11px; opacity: 0.7;">-- ms</span>
+        </button>
+
+        <!-- Reloj de Sistema -->
+        <div class="clock" id="clock-display">--:--:--</div>
+
+        <!-- Botón para Panel de Pruebas / Campo Simulado -->
+        <button class="icon-btn" id="btn-toggle-field" title="Abrir Tablero de Campo y Simulación">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main style="position: relative; min-height: 0;">
+      
+      <!-- ==================== VISTA 1: PROCESO ==================== -->
+      <section class="view active" id="view-proceso">
+        <!-- Canvas Interactivo del Proceso (SVG Vectorial Premium) -->
+        <div class="card process">
+          <div class="stale-overlay" id="stale-overlay">
+            <div>
+              <span style="font-size: 20px;">⚠️ COMUNICACIÓN INTERRUMPIDA</span>
+              <small id="stale-reason">Sin respuesta del PLC o simulador detenido</small>
+            </div>
+          </div>
+
+          <div class="svg-container">
+            <svg id="svg-process" viewBox="0 0 940 430" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="gSteel" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#344353"/>
+                  <stop offset="35%" stop-color="#4d6175"/>
+                  <stop offset="70%" stop-color="#3a4c5e"/>
+                  <stop offset="100%" stop-color="#283543"/>
+                </linearGradient>
+                <linearGradient id="gSteelDark" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#222d3a"/>
+                  <stop offset="100%" stop-color="#141c24"/>
+                </linearGradient>
+                <linearGradient id="gGrain" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#f5d485"/>
+                  <stop offset="40%" stop-color="#dfa944"/>
+                  <stop offset="100%" stop-color="#ab7a22"/>
+                </linearGradient>
+                <linearGradient id="gHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="rgba(0, 200, 255, 0.12)"/>
+                  <stop offset="100%" stop-color="rgba(0, 229, 153, 0.08)"/>
+                </linearGradient>
+                <!-- Filtro de mangas patrón -->
+                <pattern id="patBags" width="14" height="22" patternUnits="userSpaceOnUse">
+                  <rect x="2" y="2" width="10" height="18" rx="3" fill="#2d3d4e" stroke="#1d2834" stroke-width="1"/>
+                </pattern>
+                <!-- Filtro de sombra suave -->
+                <filter id="glowRun" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+
+              <!-- Fondo tenue / Cuadrícula industrial -->
+              <g opacity="0.05">
+                <line x1="0" y1="90" x2="940" y2="90" stroke="#fff" stroke-width="1"/>
+                <line x1="0" y1="180" x2="940" y2="180" stroke="#fff" stroke-width="1"/>
+                <line x1="0" y1="270" x2="940" y2="270" stroke="#fff" stroke-width="1"/>
+                <line x1="0" y1="360" x2="940" y2="360" stroke="#fff" stroke-width="1"/>
+                <line x1="160" y1="0" x2="160" y2="430" stroke="#fff" stroke-width="1"/>
+                <line x1="320" y1="0" x2="320" y2="430" stroke="#fff" stroke-width="1"/>
+                <line x1="560" y1="0" x2="560" y2="430" stroke="#fff" stroke-width="1"/>
+                <line x1="720" y1="0" x2="720" y2="430" stroke="#fff" stroke-width="1"/>
+              </g>
+
+              <!-- Banner superior de flujo de proceso -->
+              <g transform="translate(40, 10)">
+                <rect x="0" y="0" width="860" height="24" rx="6" fill="url(#gHeader)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                <text x="14" y="16" fill="#88a0b8" font-size="10.5" font-weight="700" letter-spacing="1">LÍNEA DE LLENADO DE CELDAS DE CEREAL</text>
+                <text x="846" y="16" text-anchor="end" fill="#587088" font-size="9.5" font-weight="600" letter-spacing="0.5">FLUJO: M3 ELEVADOR ➔ M2 REDLER ➔ COMPUERTAS YV1/YV2 ➔ CELDAS 1/2</text>
+              </g>
+
+              <!-- CONDUCTOS DE ASPIRACIÓN (M1 y PDT-01) -->
+              <!-- Desde cabeza de M3 hacia Filtro -->
+              <path class="duct" d="M 102,55 L 102,38 L 610,38 L 610,75"/>
+              <path class="duct-flow" id="flow-duct-m3" d="M 102,55 L 102,38 L 610,38 L 610,75"/>
+              <!-- Desde cuerpo de Redler M2 hacia Filtro -->
+              <path class="duct" d="M 450,72 L 450,48 L 610,48"/>
+              <path class="duct-flow" id="flow-duct-m2" d="M 450,72 L 450,48 L 610,48"/>
+              <!-- Conexión Filtro PDT-01 hacia Aspirador M1 -->
+              <path class="duct" d="M 660,115 L 740,115"/>
+
+              <!-- FILTRO DE MANGAS (PDT-01) -->
+              <g id="grp-filtro" transform="translate(565, 75)">
+                <!-- Tolva inferior y cuerpo -->
+                <path d="M 10,135 L 36,172 L 68,172 L 94,135 Z" fill="#18222d" stroke="#37485a" stroke-width="1.5"/>
+                <rect class="p-steel-d" x="10" y="0" width="84" height="135" rx="5"/>
+                <!-- Mangas filtrantes interiores -->
+                <rect x="16" y="32" width="72" height="96" fill="url(#patBags)"/>
+                <!-- Cartel de Identificación Superior con holgura amplia -->
+                <rect x="4" y="5" width="96" height="26" rx="4" fill="#0c131b" stroke="#253548" stroke-width="1.2"/>
+                <text x="52" y="15.5" text-anchor="middle" fill="#f0f5fc" style="font-size: 7.2px; font-weight: 800; letter-spacing: 0.2px;">FILTRO DE MANGAS</text>
+                <text x="52" y="26" text-anchor="middle" fill="#00c8ff" style="font-size: 8px; font-weight: 700; letter-spacing: 0.4px;">PDT-01</text>
+                <!-- Indicador Digital ΔP Integrado en Filtro -->
+                <g transform="translate(18, 52)">
+                  <rect x="0" y="0" width="68" height="36" rx="5" fill="#090f16" stroke="#00c8ff" stroke-width="1.2" opacity="0.95"/>
+                  <text class="p-val" id="svg-dp-val" x="34" y="18" text-anchor="middle" font-size="12" fill="#00e5ff">0 Pa</text>
+                  <text class="p-label-s" x="34" y="30" text-anchor="middle" font-size="8" fill="#7d95ab">ΔP FILTRO</text>
+                </g>
+              </g>
+
+              <!-- M1 - VENTILADOR DE ASPIRACIÓN (ESTRUCTURA Y MOTOR DESACOPLADOS PARA VISUAL LIMPIO) -->
+              <g id="grp-m1-struct" transform="translate(755, 115)">
+                <!-- Carcasa voluta/caracol del ventilador centrífugo -->
+                <path d="M -22,10 C -36,-12 -12,-38 24,-30 C 42,-20 48,4 36,22 L 36,34 L 14,34 Z" fill="#16222f" stroke="#465c74" stroke-width="2"/>
+                <!-- Chimenea vertical de escape de aire limpio -->
+                <rect x="15" y="-48" width="20" height="22" rx="2" fill="#1f2c3b" stroke="#465c74" stroke-width="1.5"/>
+                <text class="p-label-s" x="25" y="-53" text-anchor="middle" font-size="8.5" font-weight="700" fill="#88a0b8">ESCAPE</text>
+                <!-- Flechas de flujo en el escape -->
+                <path d="M 25,-30 L 25,-41" stroke="#00c8ff" stroke-width="1.6" stroke-linecap="round"/>
+                <polygon points="25,-44 21,-39 29,-39" fill="#00c8ff"/>
+
+                <!-- Aspas rotativas del rodete centrífugo -->
+                <g class="fan-rotor" transform="translate(8, 6)">
+                  <line x1="-22" y1="0" x2="22" y2="0" stroke="#50667e" stroke-width="3"/>
+                  <line x1="0" y1="-22" x2="0" y2="22" stroke="#50667e" stroke-width="3"/>
+                  <line x1="-15" y1="-15" x2="15" y2="15" stroke="#50667e" stroke-width="2.5"/>
+                  <line x1="-15" y1="15" x2="15" y2="-15" stroke="#50667e" stroke-width="2.5"/>
+                </g>
+
+                <!-- Núcleo central del motor M1 (Único elemento con clase .motor, aislado de los textos) -->
+                <g id="grp-m1" class="motor" transform="translate(8, 6)">
+                  <circle class="body" cx="0" cy="0" r="18"/>
+                  <text x="0" y="0" font-size="12" font-weight="800">M1</text>
+                </g>
+
+                <!-- Placa de Identificación M1 (Completamente fuera de la clase motor, con separación impecable) -->
+                <g transform="translate(-27, 48)">
+                  <rect x="0" y="0" width="72" height="28" rx="4" fill="#0c131b" stroke="#253548" stroke-width="1.2"/>
+                  <text class="p-label" x="36" y="12" text-anchor="middle" font-size="9" font-weight="700">Aspiración</text>
+                  <text class="p-label-s" x="36" y="23" text-anchor="middle" font-size="8" font-weight="700" fill="#00c8ff">%Q0.0</text>
+                </g>
+              </g>
+
+              <!-- M3 - ELEVADOR DE CANGILONES (Columna vertical izquierda con 65px de holgura total) -->
+              <g id="grp-m3-struct" transform="translate(65, 60)">
+                <!-- Placa título superior unificada (Amplitud generosa para evitar desbordes) -->
+                <rect x="-26" y="-25" width="128" height="20" rx="4" fill="#0d141e" stroke="#2a3c50" stroke-width="1.2"/>
+                <text class="p-tag" x="38" y="-11.5" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="0.3">ELEVADOR M3 · %Q0.2</text>
+                
+                <!-- Cabeza del elevador (Carcasa superior con tambor motriz) -->
+                <rect x="0" y="0" width="76" height="52" rx="6" fill="#243343" stroke="#485e76" stroke-width="1.8"/>
+                
+                <!-- Motor M3 montado directamente en el tambor de cabeza (Sin colisión con Redler) -->
+                <g id="grp-m3" class="motor" transform="translate(38, 26)">
+                  <circle class="body" cx="0" cy="0" r="18"/>
+                  <text x="0" y="0" font-size="12" font-weight="800">M3</text>
+                </g>
+
+                <!-- Columna vertical de cangilones (Trunk) -->
+                <rect class="p-steel" x="6" y="52" width="64" height="240" rx="3"/>
+                
+                <!-- Cangilones móviles (banda) -->
+                <g id="anim-buckets">
+                  <line class="buckets" x1="22" y1="58" x2="22" y2="285"/>
+                  <line class="buckets down" x1="54" y1="58" x2="54" y2="285"/>
+                </g>
+                
+                <!-- Pie del elevador (Carcasa de base ampliada) -->
+                <rect x="-10" y="292" width="96" height="48" rx="6" fill="#15212d" stroke="#3d5168" stroke-width="1.6"/>
+                
+                <!-- Sensor SSL (Giro) con marco proporcionado y textos contenidos -->
+                <g id="grp-ssl" transform="translate(2, 298)">
+                  <circle cx="11" cy="18" r="7.5" fill="#303f50" id="led-ssl" stroke="#52657a" stroke-width="1.5"/>
+                  <rect x="23" y="4" width="58" height="28" rx="4" fill="#0c131b" stroke="#253548" stroke-width="1.2"/>
+                  <text x="52" y="16" class="p-label" text-anchor="middle" font-size="8" font-weight="700">SSL (Giro)</text>
+                  <text x="52" y="27" class="p-label-s" text-anchor="middle" font-size="8" font-weight="700" fill="#00c8ff">%I0.4</text>
+                </g>
+
+                <!-- Entrada de Grano / Tolva de alimentación -->
+                <rect x="-52" y="306" width="42" height="20" rx="3" fill="#121a24" stroke="rgba(240,194,90,0.7)" stroke-width="1.2"/>
+                <text x="-31" y="319.5" text-anchor="middle" fill="#f0c25a" font-size="8.5" font-weight="800">GRANO ➔</text>
+
+                <!-- Tolva de descarga desde la cabeza de M3 hacia el Redler M2 -->
+                <path d="M 76,14 L 100,14 L 100,44 L 76,38 Z" fill="#1b2633" stroke="#485e76" stroke-width="1.5"/>
+                <polygon points="94,29 86,24 86,34" fill="#f0c25a"/>
+              </g>
+
+              <!-- M2 - REDLER DISTRIBUIDOR (Conveyor horizontal superior, inicia a 165px) -->
+              <g id="grp-m2-struct" transform="translate(165, 60)">
+                <!-- Placa de Identificación de M2 (Ubicada arriba con espacio) -->
+                <rect x="50" y="-25" width="250" height="20" rx="4" fill="#0d141e" stroke="#2a3c50" stroke-width="1.2"/>
+                <text class="p-tag" x="175" y="-11.5" text-anchor="middle" font-size="9.5" font-weight="700">REDLER DISTRIBUIDOR M2 · %Q0.1</text>
+
+                <!-- Cuerpo cerrado del transportador redler -->
+                <rect class="p-steel" x="0" y="14" width="350" height="34" rx="4"/>
+                <!-- Ventanas de inspección -->
+                <rect x="12" y="20" width="326" height="22" rx="3" fill="#101823" stroke="#253548" stroke-width="1"/>
+                <!-- Cadena de arrastre animada -->
+                <line class="chain" x1="18" y1="31" x2="332" y2="31" id="anim-chain"/>
+              </g>
+
+              <!-- Motor M2 en el extremo derecho del redler (Sin solapamientos) -->
+              <g id="grp-m2" class="motor" transform="translate(535, 91)">
+                <circle class="body" cx="0" cy="0" r="20"/>
+                <text x="0" y="0" font-size="12" font-weight="800">M2</text>
+              </g>
+              <g transform="translate(513, 115)">
+                <rect x="0" y="0" width="44" height="16" rx="3" fill="#0d141e" stroke="#253548" stroke-width="1"/>
+                <text class="p-label-s" x="22" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#00c8ff">%Q0.1</text>
+              </g>
+
+              <!-- DESCARGA Y COMPUERTA YV1 (Hacia Celda 1 - Recuadro Industrial Perfilado) -->
+              <g id="grp-yv1" class="gate" transform="translate(230, 96)">
+                <!-- Manga superior de conexión con redler -->
+                <rect x="14" y="8" width="16" height="4" fill="#202c3b" stroke="#37485a" stroke-width="1"/>
+                <!-- Marco / Recuadro industrial de la válvula -->
+                <rect x="0" y="12" width="44" height="40" rx="6" fill="#0f1722" stroke="#32475c" stroke-width="1.6"/>
+                <!-- Compuerta tipo guillotina 100% contenida adentro de su marco -->
+                <rect class="flap" x="7" y="18" width="30" height="28" rx="4"/>
+                <!-- Manga inferior hacia tolva celda 1 -->
+                <path d="M 12,52 L 2,64 L 42,64 L 32,52 Z" fill="#192330" stroke="#32475c" stroke-width="1.2"/>
+                <!-- Placa identificatoria (Debajo de la manga de descarga con marco ampliado) -->
+                <rect x="-14" y="66" width="72" height="18" rx="4" fill="#0d141e" stroke="#253548" stroke-width="1.2"/>
+                <text x="22" y="78.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#e2edf8">YV1 · %Q0.3</text>
+                <!-- Caída animada de cereal hacia celda 1 -->
+                <g class="grain-fall" id="grain-fall-1" transform="translate(22, 60)">
+                  <circle cx="0" cy="8" r="2.5"/>
+                  <circle cx="-4" cy="18" r="2.2"/>
+                  <circle cx="4" cy="28" r="2.6"/>
+                  <circle cx="-1" cy="38" r="2.4"/>
+                </g>
+              </g>
+
+              <!-- DESCARGA Y COMPUERTA YV2 (Hacia Celda 2 - Recuadro Industrial Perfilado) -->
+              <g id="grp-yv2" class="gate" transform="translate(410, 96)">
+                <!-- Manga superior de conexión con redler -->
+                <rect x="14" y="8" width="16" height="4" fill="#202c3b" stroke="#37485a" stroke-width="1"/>
+                <!-- Marco / Recuadro industrial de la válvula -->
+                <rect x="0" y="12" width="44" height="40" rx="6" fill="#0f1722" stroke="#32475c" stroke-width="1.6"/>
+                <!-- Compuerta tipo guillotina 100% contenida adentro de su marco -->
+                <rect class="flap" x="7" y="18" width="30" height="28" rx="4"/>
+                <!-- Manga inferior hacia tolva celda 2 -->
+                <path d="M 12,52 L 2,64 L 42,64 L 32,52 Z" fill="#192330" stroke="#32475c" stroke-width="1.2"/>
+                <!-- Placa identificatoria (Debajo de la manga de descarga con marco ampliado) -->
+                <rect x="-14" y="66" width="72" height="18" rx="4" fill="#0d141e" stroke="#253548" stroke-width="1.2"/>
+                <text x="22" y="78.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#e2edf8">YV2 · %Q0.4</text>
+                <!-- Caída animada de cereal hacia celda 2 -->
+                <g class="grain-fall" id="grain-fall-2" transform="translate(22, 60)">
+                  <circle cx="0" cy="8" r="2.5"/>
+                  <circle cx="-4" cy="18" r="2.2"/>
+                  <circle cx="4" cy="28" r="2.6"/>
+                  <circle cx="-1" cy="38" r="2.4"/>
+                </g>
+              </g>
+
+              <!-- CELDA 1 (Silo de almacenamiento) -->
+              <g id="grp-celda-1" transform="translate(190, 172)">
+                <defs>
+                  <clipPath id="clip-silo-1">
+                    <path d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z"/>
+                  </clipPath>
+                </defs>
+                <!-- Contorno Silo / Celda con tolva inferior -->
+                <path class="p-steel-d" d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z"/>
+                <!-- Masa de Grano / Cereal (Nivel variable dinámico) -->
+                <rect id="grain-level-1" x="0" y="140" width="124" height="230" fill="url(#gGrain)" clip-path="url(#clip-silo-1)" opacity="0.9"/>
+                <!-- Borde exterior metálico del silo con costillas estructurales -->
+                <path d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z" fill="none" stroke="#50667e" stroke-width="2.5"/>
+                <line x1="0" y1="65" x2="124" y2="65" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                <line x1="0" y1="115" x2="124" y2="115" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                
+                <!-- Tarjeta Central de Medición y Estado -->
+                <g transform="translate(17, 52)">
+                  <rect x="0" y="0" width="90" height="50" rx="6" fill="rgba(11, 17, 24, 0.9)" stroke="#223345" stroke-width="1.2"/>
+                  <text class="p-tag" x="45" y="18" text-anchor="middle" font-size="12" letter-spacing="1">CELDA 1</text>
+                  <text class="p-val" id="txt-level-pct-1" x="45" y="39" text-anchor="middle" font-size="16" fill="#00e5ff">35 %</text>
+                </g>
+
+                <!-- Sensor Nivel Alto LSH C1 (%I0.5) (Separado de YV1) -->
+                <g id="grp-lsh1" class="lsh" transform="translate(86, 12)">
+                  <circle cx="12" cy="12" r="9"/>
+                  <text class="p-label-s" x="-4" y="15" text-anchor="end" font-weight="700">LSH1</text>
+                  <text class="p-label-s" x="-4" y="25" text-anchor="end" font-size="8" fill="#8ba2b8">%I0.5</text>
+                </g>
+              </g>
+
+              <!-- CELDA 2 (Silo de almacenamiento) -->
+              <g id="grp-celda-2" transform="translate(370, 172)">
+                <defs>
+                  <clipPath id="clip-silo-2">
+                    <path d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z"/>
+                  </clipPath>
+                </defs>
+                <path class="p-steel-d" d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z"/>
+                <rect id="grain-level-2" x="0" y="190" width="124" height="230" fill="url(#gGrain)" clip-path="url(#clip-silo-2)" opacity="0.9"/>
+                <path d="M 0,16 L 124,16 L 124,165 L 62,225 L 0,165 Z" fill="none" stroke="#50667e" stroke-width="2.5"/>
+                <line x1="0" y1="65" x2="124" y2="65" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                <line x1="0" y1="115" x2="124" y2="115" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+                <!-- Tarjeta Central de Medición y Estado -->
+                <g transform="translate(17, 52)">
+                  <rect x="0" y="0" width="90" height="50" rx="6" fill="rgba(11, 17, 24, 0.9)" stroke="#223345" stroke-width="1.2"/>
+                  <text class="p-tag" x="45" y="18" text-anchor="middle" font-size="12" letter-spacing="1">CELDA 2</text>
+                  <text class="p-val" id="txt-level-pct-2" x="45" y="39" text-anchor="middle" font-size="16" fill="#00e5ff">10 %</text>
+                </g>
+
+                <!-- Sensor Nivel Alto LSH C2 (%I0.6) (Separado de YV2) -->
+                <g id="grp-lsh2" class="lsh" transform="translate(86, 12)">
+                  <circle cx="12" cy="12" r="9"/>
+                  <text class="p-label-s" x="-4" y="15" text-anchor="end" font-weight="700">LSH2</text>
+                  <text class="p-label-s" x="-4" y="25" text-anchor="end" font-size="8" fill="#8ba2b8">%I0.6</text>
+                </g>
+              </g>
+
+              <!-- CONSOLA DE SEÑALIZACIÓN EN PLANTA (CAMPO) -->
+              <g transform="translate(565, 275)">
+                <rect x="0" y="0" width="310" height="110" rx="8" fill="#0e1620" stroke="#223447" stroke-width="1.4"/>
+                <rect x="0" y="0" width="310" height="24" rx="8" fill="rgba(255,255,255,0.03)"/>
+                <text class="p-label-s" x="155" y="16" text-anchor="middle" font-weight="700" letter-spacing="1">SEÑALIZACIÓN EN PLANTA (CAMPO)</text>
+
+                <!-- Bocina de Pre-arranque %Q0.5 -->
+                <g id="svg-horn" class="horn" transform="translate(38, 38)" style="cursor: pointer;" title="Bocina %Q0.5 (Clic para prueba manual de sonido)">
+                  <path d="M 0,13 L 14,13 L 26,26 L 26,0 L 14,13 Z" fill="#6c7d91"/>
+                  <path class="wave" d="M 30,6 A 12,12 0 0 1 30,20" stroke="#00c8ff" stroke-width="2.5" fill="none"/>
+                  <path class="wave" d="M 36,2 A 18,18 0 0 1 36,24" stroke="#00c8ff" stroke-width="2" fill="none"/>
+                  <text class="p-label-s" x="16" y="40" text-anchor="middle" font-weight="600">BOCINA</text>
+                  <text class="p-label-s" x="16" y="52" text-anchor="middle" font-size="8.5" fill="#00c8ff">%Q0.5</text>
+                </g>
+
+                <!-- Baliza de Falla/Aviso %Q0.6 -->
+                <g id="svg-beacon" class="beacon" transform="translate(150, 38)">
+                  <circle cx="12" cy="12" r="12"/>
+                  <path d="M 5,24 L 19,24 L 16,29 L 8,29 Z" fill="#445568"/>
+                  <text class="p-label-s" x="12" y="40" text-anchor="middle" font-weight="600">BALIZA</text>
+                  <text class="p-label-s" x="12" y="52" text-anchor="middle" font-size="8.5" fill="#00c8ff">%Q0.6</text>
+                </g>
+
+                <!-- Piloto de Marcha %Q0.7 -->
+                <g id="svg-pilot" class="pilot" transform="translate(242, 38)">
+                  <circle cx="12" cy="12" r="12"/>
+                  <text class="p-label-s" x="12" y="40" text-anchor="middle" font-weight="600">PILOTO</text>
+                  <text class="p-label-s" x="12" y="52" text-anchor="middle" font-size="8.5" fill="#00c8ff">%Q0.7</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Barra de Tiempo y Secuencia de Arranque / Parada Escalonada -->
+          <div class="sequence">
+            <div class="seq-step" id="seq-bocina">
+              <div class="lbl"><span class="step-badge">1</span><span>Bocina Pre-aviso</span><b id="seq-t-bocina">--/5 s</b></div>
+              <div class="seq-bar"><i style="width: 0%"></i></div>
+            </div>
+            <div class="seq-step" id="seq-m1">
+              <div class="lbl"><span class="step-badge">2</span><span>Aspiración M1</span><b id="seq-t-m1">--/5 s</b></div>
+              <div class="seq-bar"><i style="width: 0%"></i></div>
+            </div>
+            <div class="seq-step" id="seq-m2">
+              <div class="lbl"><span class="step-badge">3</span><span>Redler M2</span><b id="seq-t-m2">--/5 s</b></div>
+              <div class="seq-bar"><i style="width: 0%"></i></div>
+            </div>
+            <div class="seq-step" id="seq-m3">
+              <div class="lbl"><span class="step-badge">4</span><span>Elevador M3</span><b id="seq-t-m3">Régimen</b></div>
+              <div class="seq-bar"><i style="width: 0%"></i></div>
+            </div>
+            <div class="seq-step" id="seq-parada">
+              <div class="lbl"><span class="step-badge stop">⏹</span><span>Parada Escalonada</span><b id="seq-t-stop">--</b></div>
+              <div class="seq-bar"><i style="width: 0%"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Lateral: MANDO, INDICADORES Y KPIS (Según Fig. 6 + Mejoras) -->
+        <aside class="side">
+          <!-- CARD MANDO -->
+          <div class="card card-mando">
+            <div class="card-h">
+              <span>Mando de Operación</span>
+              <span class="grow"></span>
+              <span class="mono scada-badge">SCADA ➔ PLC</span>
+            </div>
+            
+            <div class="mando">
+              <div class="btn-grid">
+                <button class="btn start" id="btn-marcha">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  MARCHA
+                </button>
+                <button class="btn stop" id="btn-parada">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+                  PARADA
+                </button>
+                <button class="btn cell" id="btn-celda-1" data-celda="1">Celda 1</button>
+                <button class="btn cell" id="btn-celda-2" data-celda="2">Celda 2</button>
+                <button class="btn reset" id="btn-reset">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  RESET DE FALLAS
+                </button>
+              </div>
+
+              <div class="destino">
+                <span>Destino:</span>
+                <b id="txt-destino" class="none">Sin celda seleccionada</b>
+              </div>
+            </div>
+
+            <!-- Diagnóstico de Permiso (Por qué no arranca si PERMISO está en 0) -->
+            <div class="why" id="box-why-no-permiso">
+              <b>Condición de arranque bloqueada:</b>
+              <ul id="list-permiso-reasons"></ul>
+            </div>
+
+            <!-- Lámparas de Estado (Fig. 6) -->
+            <div class="lamps">
+              <div class="lamp">
+                <span class="led" id="led-permiso"></span>
+                <span>Permiso de marcha (%M9)</span>
+                <span class="v mono" id="val-permiso">0</span>
+              </div>
+              <div class="lamp">
+                <span class="led" id="led-linea"></span>
+                <span>Línea en marcha (%M5)</span>
+                <span class="v mono" id="val-linea">0</span>
+              </div>
+              <div class="lamp">
+                <span class="led amber" id="led-bocina"></span>
+                <span>Bocina sonando (%M6)</span>
+                <span class="v mono" id="val-bocina">0</span>
+              </div>
+              <div class="lamp">
+                <span class="led" id="led-vida"></span>
+                <span>Comunicación PLC (VIDA %M10)</span>
+                <span class="v mono" id="val-vida">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD KPIS Y ANALÓGICAS (%MW0 y %MW1) -->
+          <div class="card kpis">
+            <div class="card-h">
+              <span>Instrumentación y Variables</span>
+            </div>
+
+            <!-- Transmisor PDT-01 (%MW0) -->
+            <div class="kpi">
+              <div class="kpi-top">
+                <span class="t">ΔP Filtro (PDT-01)</span>
+                <span class="v" id="txt-dp-pa">0 <small>Pa</small></span>
+              </div>
+              <!-- Mini escala con marcas de alarma (1500 aviso, 2000 falla) -->
+              <div class="dp-scale">
+                <i id="needle-dp" style="left: 0%"></i>
+              </div>
+              <div class="dp-ticks">
+                <span>0 Pa</span>
+                <span style="color: var(--warn);">1500 (Aviso)</span>
+                <span style="color: var(--fault);">2000 (Falla)</span>
+                <span>3000 Pa</span>
+              </div>
+              <!-- Sparkline SVG de tendencia histórica reciente -->
+              <svg class="spark" id="spark-dp" preserveAspectRatio="none" viewBox="0 0 100 35">
+                <path d="M 0,30 L 100,30" fill="none" stroke="var(--info)" stroke-width="1.8"/>
+              </svg>
+            </div>
+
+            <!-- Contador de Arranques C0 (%MW1) -->
+            <div class="kpi">
+              <div class="kpi-top">
+                <span class="t">Arranques elevador (última hora)</span>
+                <span class="v" id="txt-starts-val">0 <small>/ 6 máx</small></span>
+              </div>
+              <!-- Barra de 6 segmentos -->
+              <div class="starts" id="box-starts-segments">
+                <i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div style="margin-top: 8px; font-size: 11px; color: var(--muted); display: flex; justify-content: space-between;">
+                <span>Ventana 1h: <b id="txt-hora-timer" class="mono">--</b></span>
+                <span id="txt-starts-warn" style="color: var(--warn); display: none;">¡LÍMITE ALCANZADO!</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <!-- ==================== VISTA 2: ALARMAS ==================== -->
+      <section class="view" id="view-alarmas">
+        <!-- Alarmas Activas ISA-18.2 -->
+        <div class="card alarm-active">
+          <div class="card-h">
+            <span>Alarmas Activas y Pendientes de Reconocimiento</span>
+            <span class="grow"></span>
+            <button class="btn-s primary" id="btn-ack-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Reconocer Todas (ACK)
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 130px;">Prioridad</th>
+                  <th style="width: 140px;">Tag / Bit</th>
+                  <th>Descripción del Evento</th>
+                  <th style="width: 130px;">Hora Activación</th>
+                  <th style="width: 150px;">Estado ISA-18.2</th>
+                  <th style="width: 100px; text-align: center;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-active-alarms">
+                <tr><td colspan="6" class="empty">No hay alarmas activas en la planta</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historial Completo de Alarmas y Registro de Eventos -->
+        <div class="card alarm-hist">
+          <div class="card-h">
+            <span>Historial y Registro de Eventos del Proceso</span>
+            <span class="grow"></span>
+            <div class="seg" id="seg-hist-filter">
+              <button class="active" data-filter="all">Todos</button>
+              <button data-filter="alarma">Alarmas</button>
+              <button data-filter="evento">Operaciones</button>
+            </div>
+            <input type="text" class="search" id="input-search-hist" placeholder="Buscar en historial...">
+            <a href="/api/historial.csv" class="btn-s" download>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar CSV
+            </a>
+            <button class="btn-s" id="btn-clear-hist" title="Limpiar historial">Limpiar</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 155px;">Fecha y Hora</th>
+                  <th style="width: 100px;">Tipo</th>
+                  <th style="width: 130px;">Tag</th>
+                  <th>Mensaje Registrado</th>
+                  <th style="width: 100px;">Prioridad</th>
+                  <th style="width: 130px;">Estado / Origen</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-hist-events"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BARRA INFERIOR: ÚLTIMA ALARMA (Consigna Fig. 6) -->
+    <footer class="alarmbar" id="alarmbar-footer">
+      <span class="lbl">Última alarma:</span>
+      <div class="msg" id="alarmbar-msg">
+        <span class="txt">(sin alarmas activas)</span>
+      </div>
+      <div class="legend">
+        <span><i style="background: var(--off)"></i> Gris: parado / cerrada</span>
+        <span><i style="background: var(--run)"></i> Verde: marcha / abierta</span>
+        <span><i style="background: var(--fault)"></i> Rojo intermitente: falla</span>
+        <span><i style="background: var(--warn)"></i> Amarillo: aviso</span>
+      </div>
+    </footer>
+
+    <!-- DRAWER LATERAL: TABLERO DE CAMPO Y SIMULACIÓN FÍSICA -->
+    <aside class="drawer" id="drawer-field">
+      <div class="card-h">
+        <span>Tablero Local y Simulación de Campo</span>
+        <span class="grow"></span>
+        <button class="icon-btn" id="btn-close-field" style="width:28px;height:28px;">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- GUÍA DE PROCEDIMIENTO PASO A PASO -->
+        <div class="drawer-guide">
+          <div class="guide-title">
+            <span>📋 Guía de Puesta en Marcha (Paso a Paso)</span>
+          </div>
+          <ol class="guide-steps">
+            <li><b>1. Entradas en Machine Expert:</b> En la <i>Tabla de Animación</i> del simulador Schneider, forzar a <code>1</code> las señales de seguridad: <code>%I0.0</code> (Emergencia), <code>%I0.1..%I0.3</code> (Guardamotores), <code>%I0.4</code> (Giro) y <code>%I0.9</code> (Parada).</li>
+            <li><b>2. Seleccionar Celda:</b> Pulsar <b>Celda 1</b> o <b>Celda 2</b>.</li>
+            <li><b>3. Rearmar:</b> Pulsar <b>RESET DE FALLAS</b>. La luz <i>Permiso de marcha (%M9)</i> pasará a verde.</li>
+            <li><b>4. Iniciar:</b> Pulsar <b>▶ MARCHA</b> (Sonará la sirena 5 s e iniciarán secuencialmente M1 ➔ M2 ➔ M3).</li>
+          </ol>
+        </div>
+
+        <!-- COMANDOS RÁPIDOS INTEGRADOS (Operar sin cerrar el panel) -->
+        <div class="drawer-quick-ctrl">
+          <div class="quick-status">
+            <span>Permiso (%M9): <b id="dq-permiso" class="off">0</b></span>
+            <span>Línea (%M5): <b id="dq-linea" class="off">0</b></span>
+            <span>Destino: <b id="dq-dest" class="mono">C1</b></span>
+          </div>
+          <div class="quick-btns">
+            <button class="btn-s" id="dq-btn-c1" type="button">Celda 1</button>
+            <button class="btn-s" id="dq-btn-c2" type="button">Celda 2</button>
+            <button class="btn-s warn" id="dq-btn-reset" type="button" style="color:var(--warn); border-color:var(--warn);">Reset</button>
+          </div>
+          <div class="quick-btns-row2">
+            <button class="btn-s primary" id="dq-btn-marcha" type="button">▶ MARCHA</button>
+            <button class="btn-s danger" id="dq-btn-parada" type="button">⏹ PARADA</button>
+          </div>
+        </div>
+
+        <!-- MODO MACHINE EXPERT BASIC: INSTRUCCIONES Y DIAGNÓSTICO EN VIVO -->
+        <div class="m221-only">
+          <div class="m221-banner">
+            <div class="m221-title">
+              <span class="dot ok" style="width:8px;height:8px;display:inline-block;"></span>
+              <span>Modo Machine Expert Basic Conectado</span>
+            </div>
+            <p style="margin:0 0 4px 0;">El simulador M221 de Schneider opera con este SCADA. Las entradas físicas se comandan en Machine Expert:</p>
+            <ul>
+              <li><b>Entradas Digitales (%I0.x):</b> Se fuerzan en la <i>Tabla de Animación</i> (1 = seguro / 0 = falla).</li>
+              <li><b>Presión Analógica (%IW0.0):</b> Doble clic en la columna <i>ANA</i> del simulador Schneider (600 pts = 1800 Pa, 700 pts = 2100 Pa).</li>
+              <li><b>Comandos de Operación:</b> Usá los botones de Marcha/Parada/Reset arriba o en el panel derecho.</li>
+            </ul>
+          </div>
+
+          <h3 style="margin-top:10px;">Diagnóstico de Entradas Schneider (Lectura en Vivo)</h3>
+          <div class="m221-diag-list" id="diag-inputs-m221">
+            <div class="m221-diag-item"><span class="tag">%I0.0</span> <span>Seta PE</span><span class="st" id="diag-i0">--</span></div>
+            <div class="m221-diag-item"><span class="tag">%I0.1</span> <span>GM1 Aspiración</span><span class="st" id="diag-i1">--</span></div>
+            <div class="m221-diag-item"><span class="tag">%I0.2</span> <span>GM2 Redler</span><span class="st" id="diag-i2">--</span></div>
+            <div class="m221-diag-item"><span class="tag">%I0.3</span> <span>GM3 Elevador</span><span class="st" id="diag-i3">--</span></div>
+            <div class="m221-diag-item"><span class="tag">%I0.4</span> <span>Giro SSL</span><span class="st" id="diag-i4">--</span></div>
+            <div class="m221-diag-item"><span class="tag">%I0.9</span> <span>PB Parada NC</span><span class="st" id="diag-i9">--</span></div>
+          </div>
+        </div>
+
+        <!-- MODO PLC VIRTUAL: CONTROLES DE SIMULACIÓN INTERACTIVOS (OCULTOS EN M221) -->
+        <div class="sim-only">
+          <div class="note">
+            <b>Simulación de campo:</b> Permite accionar los pulsadores y switches del PLC, inyectar presión diferencial en PDT-01, simular corte de banda y nivel de celdas en el PLC virtual.
+          </div>
+
+          <h3>Pulsadores del Tablero Local (Entradas PLC)</h3>
+          <div class="io-list">
+            <div class="io">
+              <span class="addr">%I0.8</span>
+              <div class="name">PB_MARCHA (NA)<small>Pulsador de marcha local</small></div>
+              <button class="push" data-pulse="8">PULSAR</button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.9</span>
+              <div class="name">PB_PARADA (NC)<small>1 = En reposo · 0 = Pulsado</small></div>
+              <button class="switch on" id="sw-i-9" data-toggle="9"></button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.7</span>
+              <div class="name">PB_RESET (NA)<small>Pulsador de rearme de fallas</small></div>
+              <button class="push" data-pulse="7">PULSAR</button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.0</span>
+              <div class="name">PE_OK (Seta NC)<small>Parada de emergencia (0 = activada)</small></div>
+              <button class="switch on" id="sw-i-0" data-toggle="0"></button>
+            </div>
+          </div>
+
+          <h3>Protecciones Eléctricas y Sensores (Entradas)</h3>
+          <div class="io-list">
+            <div class="io">
+              <span class="addr">%I0.1</span>
+              <div class="name">GM1_OK<small>Guardamotor Aspiración M1</small></div>
+              <button class="switch on" id="sw-i-1" data-toggle="1"></button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.2</span>
+              <div class="name">GM2_OK<small>Guardamotor Redler M2</small></div>
+              <button class="switch on" id="sw-i-2" data-toggle="2"></button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.3</span>
+              <div class="name">GM3_OK<small>Guardamotor Elevador M3</small></div>
+              <button class="switch on" id="sw-i-3" data-toggle="3"></button>
+            </div>
+            <div class="io">
+              <span class="addr">%I0.4</span>
+              <div class="name">SSL (GIRO_M3)<small>Sensor de giro en pie de elevador</small></div>
+              <button class="switch" id="sw-i-4" data-toggle="4"></button>
+            </div>
+          </div>
+
+          <h3>Transmisor Analógico PDT-01 (%IW0.0)</h3>
+          <div class="range-row">
+            <div class="rt">
+              <span>Entrada 0–10 V: <b id="lbl-field-iw0">300 pts (3.0 V)</b></span>
+              <span>Escala: <b id="lbl-field-dp">900 Pa</b></span>
+            </div>
+            <input type="range" id="rng-field-iw0" min="0" max="1000" value="300">
+            <div class="quick">
+              <button class="btn-s" data-set-iw="100">300 Pa (Normal)</button>
+              <button class="btn-s" data-set-iw="400">1200 Pa</button>
+              <button class="btn-s" data-set-iw="600" style="color:var(--warn);">1800 Pa (Prueba 9 - Aviso)</button>
+              <button class="btn-s" data-set-iw="700" style="color:var(--fault);">2100 Pa (Prueba 9 - Falla)</button>
+            </div>
+          </div>
+
+          <h3>Modelo de Planta y Simulación Dinámica</h3>
+          <div class="io-list">
+            <div class="io">
+              <span class="addr">AUTO</span>
+              <div class="name">Simulación de Flujo y Giro<small>Genera giro automático al energizar M3 y llena celdas</small></div>
+              <button class="switch on" id="sw-plant-auto"></button>
+            </div>
+            <div class="io">
+              <span class="addr">FALLA</span>
+              <div class="name">Simular Corte de Banda SSL<small>Bloquea la señal de giro para forzar AL_GIRO (Prueba 6)</small></div>
+              <button class="switch" id="sw-giro-fail"></button>
+            </div>
+          </div>
+
+          <div class="range-row">
+            <div class="rt"><span>Nivel Manual Celda 1</span><b id="lbl-level-sim-1">35%</b></div>
+            <input type="range" id="rng-sim-lvl-1" min="0" max="100" value="35">
+          </div>
+          <div class="range-row">
+            <div class="rt"><span>Nivel Manual Celda 2</span><b id="lbl-level-sim-2">10%</b></div>
+            <input type="range" id="rng-sim-lvl-2" min="0" max="100" value="10">
+          </div>
+        </div>
+
+        <!-- TEMPORIZADORES EN VIVO (AMBOS MODOS) -->
+        <h3>Temporizadores Internos del PLC (Monitoreo)</h3>
+        <div class="tm-grid" id="grid-timers-mon">
+          <div class="tm" id="mon-tm0"><span>%TM0 Bocina</span><b id="val-mon-tm0">0/5s</b></div>
+          <div class="tm" id="mon-tm1"><span>%TM1 Arr M2</span><b id="val-mon-tm1">0/5s</b></div>
+          <div class="tm" id="mon-tm2"><span>%TM2 Arr M3</span><b id="val-mon-tm2">0/5s</b></div>
+          <div class="tm" id="mon-tm3"><span>%TM3 Vaciado</span><b id="val-mon-tm3">0/20s</b></div>
+          <div class="tm" id="mon-tm4"><span>%TM4 Barrido</span><b id="val-mon-tm4">0/30s</b></div>
+          <div class="tm" id="mon-tm5"><span>%TM5 Giro</span><b id="val-mon-tm5">0/5s</b></div>
+          <div class="tm" id="mon-tm6"><span>%TM6 DP Alta</span><b id="val-mon-tm6">0/10s</b></div>
+          <div class="tm" id="mon-tm7"><span>%TM7 DP Muy</span><b id="val-mon-tm7">0/10s</b></div>
+          <div class="tm" id="mon-tm8"><span>%TM8 Hora</span><b id="val-mon-tm8">0s</b></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MODAL DE CONFIGURACIÓN DE CONEXIÓN MODBUS -->
+    <div class="modal-bg" id="modal-conn">
+      <div class="modal">
+        <h2>Configuración de Comunicación Modbus TCP</h2>
+        
+        <div class="field">
+          <label>Controlador de Destino:</label>
+          <div class="target-opt sel" id="opt-virtual" data-target="virtual">
+            <div>
+              <b>PLC Virtual Integrado (Recomendado para Demos)</b>
+              <small>Corre internamente en Node.js, ejecuta los 51 rungs con scan de 10ms y simula la planta.</small>
+            </div>
+          </div>
+          <div class="target-opt" id="opt-machine" data-target="machine" style="margin-top: 6px;">
+            <div>
+              <b>Simulador Schneider Machine Expert Basic V1.4</b>
+              <small>Conecta por Modbus TCP al simulador M221 TM221CE24R oficial de la cátedra (puerto 502).</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>IP del PLC / Simulador:</label>
+            <input type="text" id="cfg-host" value="127.0.0.1">
+          </div>
+          <div class="field">
+            <label>Puerto TCP:</label>
+            <input type="number" id="cfg-port" value="502">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Direccionamiento Modbus (Pregunta 1):</label>
+            <select id="cfg-offset">
+              <option value="0">Base 0 (Dirección de protocolo directa: %M10 = 10)</option>
+              <option value="1">Base 1 (Referencia clásica Modicon: %M10 = 11)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Unit ID / Esclavo:</label>
+            <input type="number" id="cfg-unit" value="1">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-s" id="btn-cancel-conn">Cancelar</button>
+          <button class="btn-s primary" id="btn-save-conn">Aplicar y Conectar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+    <div class="toasts" id="toasts-container"></div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

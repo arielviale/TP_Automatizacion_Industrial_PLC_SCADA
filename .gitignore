@@ -1,0 +1,23 @@
+# Dependencias de Node.js
+node_modules/
+SCADA/node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Datos de ejecución / Logs
+SCADA/data/historial.json
+*.log
+
+# Archivos de entorno y SO
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.agents/

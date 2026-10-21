@@ -1,0 +1,17 @@
+{
+  "name": "scada-llenado-celdas",
+  "version": "1.0.0",
+  "description": "SCADA propia - Línea de llenado de celdas (TP Integrador Parte 2, Automatización Industrial UTN Paraná)",
+  "main": "server/gateway.js",
+  "scripts": {
+    "start": "node server/gateway.js",
+    "plc": "node server/plc-virtual.js"
+  },
+  "license": "MIT",
+  "author": "Hugo Ariel Martinez",
+  "private": true,
+  "dependencies": {
+    "modbus-serial": "^8.0.25",
+    "ws": "^8.22.0"
+  }
+}

@@ -1,0 +1,1057 @@
+=== PÁGINA 1 ===
+Automatización Industrial — UTN Paraná 
+Página 1 
+TRABAJO PRÁCTICO INTEGRADOR — PARTE 2 
+Programación del PLC y Supervisión SCADA de la Línea de Llenado de Celdas 
+Asignatura: Automatización Industrial — Tecnicatura Superior en Mecatrónica 
+Unidades integradas: 7 (PLC), 9 (Comunicaciones) y 10 (SCADA) · Duración: 4 clases 
+1. Presentación 
+En la Parte 1 se trabajó sobre el plano del sector de mezcla y limpieza de trigo. En esta segunda parte se 
+automatiza una línea de ese sector: el llenado de celdas de mezcla, programando el PLC y su pantalla de 
+supervisión (SCADA). 
+ 
+Reglas comunes para todos 
+Este enunciado fija el controlador, las entradas y salidas, las direcciones de memoria, los nombres 
+(símbolos), los temporizadores y el orden del programa. Estas asignaciones no se pueden cambiar. 
+El trabajo de cada alumno es escribir la lógica de cada rung, probarla y diseñar las pantallas. 
+2. Objetivos 
+• 
+Realizar la tabla de verdad del proceso 
+• 
+Programar en Ladder un proceso real usando contactos NA y NC, bobinas simples, de SET y de 
+RESET, temporizadores TON, TOF y TP, un contador, comparaciones y operaciones. 
+• 
+Diseñar una pantalla de supervisión con mandos, estados y alarmas. 
+3. Herramientas de trabajo (gratuitas) 
+Herramienta 
+Para qué se usa 
+Licencia 
+Dónde obtenerla 
+EcoStruxure Machine 
+Expert – Basic V1.4 
+(Schneider Electric) 
+Programar y simular el PLC 
+Modicon M221 
+Gratuita, sin 
+vencimiento 
+se.com → buscar «Machine 
+Expert Basic» 
+FUXA 
+SCADA: pantallas y alarmas 
+Código abierto, 
+gratuita 
+github.com/frangoteam/FUXA 
+→ Releases 
+ 
+Figura 1 — El PLC simulado y el SCADA se comunican por Modbus TCP dentro de la misma PC 
+
+
+=== PÁGINA 2 ===
+Automatización Industrial — UTN Paraná 
+Página 2 
+4. La línea de llenado de celdas 
+ 
+Figura 2 — Equipos, instrumentos y tablero local de la línea 
+4.1 Equipos 
+Equipo 
+Función 
+M1 – Ventilador de aspiración 
+Aspira el polvo del elevador y del redler hacia el filtro de mangas. Arranca primero y 
+para último. 
+M2 – Redler distribuidor 
+Transporta el trigo sobre las celdas y lo descarga en la celda elegida. 
+M3 – Elevador de cangilones 
+Sube el trigo limpio hasta el redler. Es el equipo que «alimenta» la línea. 
+YV1 y YV2 – Compuertas de 
+llenado 
+Electroválvulas neumáticas: abren la descarga del redler hacia la celda 1 o la celda 2. 
+SSL – Control de giro 
+Detector en el pie del elevador: da señal mientras el elevador gira a velocidad normal. 
+Si la banda patina o se corta, la señal desaparece. 
+LSH C1 y LSH C2 – Nivel alto 
+Detectores de nivel alto de cada celda. 
+PDT-01 – Presión diferencial 
+Transmisor 0–10 V que mide la diferencia de presión entre la entrada y la salida del 
+filtro de mangas (0–3000 Pa). Si sube, el filtro se está tapando. 
+Tablero local 
+Pulsadores MARCHA (NA), PARADA (NC), RESET (NA) y parada de 
+EMERGENCIA (NC). Baliza de falla, piloto verde de marcha y bocina de pre-
+arranque. 
+ 
+4.2 Cómo debe funcionar 
+• 
+El operador elige la celda de destino (1 o 2) desde el SCADA. La compuerta de esa celda se abre. En 
+primera instancia, simular este punto mediante una llave selectora de 2 puntos instalada en el tablero 
+local. 
+• 
+Con la orden de MARCHA (desde el SCADA o desde el pulsador local), y si están dadas las 
+condiciones (permiso), suena la bocina durante 5 s para avisar al personal que la línea va a arrancar. 
+• 
+Al terminar la bocina arranca M1; 5 s después M2 y 5 s después M3 (Figura 3). Mientras arranca, el 
+piloto verde parpadea; con M3 en marcha queda fijo. 
+
+
+=== PÁGINA 3 ===
+Automatización Industrial — UTN Paraná 
+Página 3 
+• 
+Con la orden de PARADA se detiene M3 en el acto. M2 sigue 20 s para vaciarse y M1 sigue 30 s 
+más para limpiar los conductos. 
+• 
+Si la celda de destino llega a nivel alto, la línea se detiene igual que con la orden de parada. 
+• 
+Si salta un guardamotor, falla el control de giro o se pulsa la emergencia, el equipo afectado y los 
+que lo alimentan se detienen en el acto. La falla queda memorizada hasta que se pulse RESET. 
+• 
+Si la presión diferencial del filtro supera 1500 Pa durante 10 s se da un aviso; si supera 2000 Pa 
+durante 10 s, la línea se detiene. 
+• 
+El PLC cuenta los arranques del elevador en cada hora y avisa si llegan a 6 (el límite de arranques 
+por hora que se consideró en la Parte 1). 
+ 
+Figura 3 — Secuencia de arranque y de parada 
+ 
+ 
+
+
+=== PÁGINA 4 ===
+Automatización Industrial — UTN Paraná 
+Página 4 
+5. El controlador: Modicon M221 TM221CE24R 
+5.1 Características 
+Característica 
+TM221CE24R 
+Alimentación 
+100–240 Vca 
+Entradas digitales 
+14 entradas de 24 Vcc: %I0.0 a %I0.13 
+Salidas digitales 
+10 salidas a relé: %Q0.0 a %Q0.9 
+Entradas analógicas 
+2 entradas de 0–10 V incorporadas: %IW0.0 y %IW0.1 (valor 0 a 1000 en la escala 
+«normal») 
+Comunicaciones 
+Puerto Ethernet (servidor Modbus TCP) y puerto serie 
+Programación 
+EcoStruxure Machine Expert – Basic: lenguajes Ladder, Lista de instrucciones y Grafcet. 
+En este TP se usa Ladder. 
+5.2 Cómo ejecuta el programa: el ciclo de scan 
+El PLC repite continuamente cuatro pasos: (1) lee todas las entradas y guarda su estado; (2) ejecuta el 
+programa rung por rung, de arriba hacia abajo; (3) escribe las salidas; (4) atiende las comunicaciones (por 
+ejemplo, el SCADA). Un ciclo dura unos pocos milisegundos. 
+• 
+El orden de los rungs importa: un rung usa los valores que dejaron los rungs anteriores en el mismo 
+ciclo. 
+• 
+Cada bobina simple se escribe en un único rung. Si la misma salida aparece como bobina en dos 
+rungs, gana el último y el programa se vuelve impredecible («doble bobina»). Las bobinas SET y 
+RESET de un mismo bit sí pueden estar en rungs distintos. 
+5.3 Objetos de memoria 
+Objeto 
+Qué es 
+Ejemplo en este TP 
+%I0.x 
+Entrada digital (bit). Refleja el borne de entrada. 
+%I0.0 = PE_OK 
+%Q0.x 
+Salida digital (bit). Acciona el relé de salida. 
+%Q0.0 = KM1_ASPIR 
+%IW0.x 
+Entrada analógica (palabra de 16 bits). 
+%IW0.0 = presión diferencial, 0 a 
+1000 
+%Mx 
+Bit interno (memoria). Se usa para estados, alarmas y órdenes. 
+%M5 = LINEA 
+%MWx 
+Palabra interna de 16 bits (entero de −32 768 a 32 767). 
+%MW0 = ΔP en Pa 
+%Sx 
+Bit de sistema, lo maneja el PLC. 
+%S6 = reloj de 1 s (0,5 s en 1 y 0,5 s 
+en 0) 
+%TMi 
+Temporizador. %TMi.Q = salida, %TMi.V = valor actual, 
+%TMi.P = preset. 
+%TM0 = T_BOCINA 
+%Ci 
+Contador. %Ci.V = valor actual, %Ci.P = preset. 
+%C0 = C_ARRANQUES 
+ 
+6. Instrucciones Ladder que se usan 
+Elemento 
+Símbolo 
+Qué hace 
+Dónde se usa 
+Contacto NA 
+─┤ ├─ 
+Deja pasar la «corriente» del rung cuando la variable 
+vale 1. 
+En casi todos los rungs 
+Contacto NC 
+─┤/├─ 
+Deja pasar cuando la variable vale 0. 
+Detección de fallas; 
+pulsador de parada 
+Flanco ascendente 
+─┤P├─ 
+Deja pasar un solo ciclo cuando la variable pasa de 0 a 
+1. Evita que un pulsador mantenido actúe muchas veces. 
+Pulsadores locales de 
+MARCHA y RESET 
+
+
+=== PÁGINA 5 ===
+Automatización Industrial — UTN Paraná 
+Página 5 
+Elemento 
+Símbolo 
+Qué hace 
+Dónde se usa 
+Bobina 
+─( )─ 
+Copia el resultado del rung en el bit: 1 si el rung 
+conduce, 0 si no. 
+Motores, compuertas, 
+estados 
+Bobina SET 
+─(S)─ 
+Pone el bit en 1 y lo deja en 1 aunque el rung deje de 
+conducir (memoria). 
+Memorizar fallas y la 
+orden de marcha 
+Bobina RESET 
+─(R)─ 
+Pone el bit en 0. 
+Borrar fallas, parar la 
+línea, borrar órdenes 
+Temporizador TON 
+bloque 
+Retardo a la conexión: Q pasa a 1 cuando la entrada 
+estuvo en 1 durante el preset. 
+Escalonado de arranque, 
+control de giro, retardos 
+de alarma 
+Temporizador TOF 
+bloque 
+Retardo a la desconexión: Q sigue en 1 durante el preset 
+después de que la entrada cae. 
+Vaciado del redler y 
+barrido de aspiración 
+Temporizador TP 
+bloque 
+Pulso: al aparecer la entrada, Q queda en 1 exactamente 
+durante el preset. 
+Bocina de pre-arranque 
+Contador CTU 
+bloque 
+Cuenta los flancos de su entrada CU; la entrada R lo 
+vuelve a 0. 
+Arranques del elevador 
+por hora 
+Comparación 
+[ %MW0 > 1500 
+] 
+Conduce si la comparación es verdadera. Va en la zona 
+de contactos. 
+Umbrales de ΔP, celda 
+elegida, contador 
+Operación 
+[ %MW0 := … ] 
+Calcula y asigna un valor. Va en la zona de bobinas. 
+Escalado de ΔP; valor 
+del contador para el 
+SCADA 
+ 
+Figura 4 — Comportamiento de los temporizadores TON, TOF y TP y del contador CTU 
+6.1 Configuración de temporizadores y contadores 
+Al insertar un bloque temporizador se elige el objeto (%TM0, %TM1…) y en sus propiedades se define el 
+tipo (TON, TOF o TP), la base de tiempo y el preset. En este TP todos los temporizadores usan base de 
+tiempo de 1 s, de modo que el preset se carga directamente en segundos. El contador se configura con su 
+preset (6). 
+6.2 Ejemplos resueltos 
+Los siguientes rungs forman parte del programa. Úsenlos como modelo para los demás rungs del mismo tipo: 
+arriba de cada elemento va la dirección y abajo el símbolo. 
+
+
+=== PÁGINA 6 ===
+Automatización Industrial — UTN Paraná 
+Página 6 
+ 
+Figura 5 — Ejemplos: memorizar y resetear una falla (Ej. 1 y 2), escalar una analógica (Ej. 3) y alarma con comparación y 
+retardo (Ej. 4 y 5) 
+ 
+ 
+
+
+=== PÁGINA 7 ===
+Automatización Industrial — UTN Paraná 
+Página 7 
+7. Asignación de entradas y salidas 
+Convención de seguridad positiva 
+Las señales de protección (emergencia, guardamotores, pulsador de parada) valen 1 cuando todo está 
+normal. Si se corta un cable, la entrada cae a 0 y el sistema lo interpreta como falla o parada: falla hacia 
+el lado seguro. 
+ 
+Entrada 
+Símbolo 
+Descripción 
+Estado lógico 
+%I0.0 
+PE_OK 
+Parada de emergencia (contacto NC) 
+1 = sin emergencia 
+%I0.1 
+GM1_OK 
+Guardamotor de M1 
+1 = OK 
+%I0.2 
+GM2_OK 
+Guardamotor de M2 
+1 = OK 
+%I0.3 
+GM3_OK 
+Guardamotor de M3 
+1 = OK 
+%I0.4 
+GIRO_M3 
+Control de giro del elevador 
+1 = gira normalmente 
+%I0.5 
+LSH_C1 
+Nivel alto de la celda 1 
+1 = celda llena 
+%I0.6 
+LSH_C2 
+Nivel alto de la celda 2 
+1 = celda llena 
+%I0.7 
+PB_RESET 
+Pulsador local RESET (NA) 
+1 = pulsado 
+%I0.8 
+PB_MARCHA 
+Pulsador local MARCHA (NA) 
+1 = pulsado 
+%I0.9 
+PB_PARADA 
+Pulsador local PARADA (NC) 
+1 = no pulsado 
+ 
+Salida 
+Símbolo 
+Descripción 
+%Q0.0 
+KM1_ASPIR 
+Contactor del ventilador de aspiración M1 
+%Q0.1 
+KM2_REDLER 
+Contactor del redler M2 
+%Q0.2 
+KM3_ELEV 
+Contactor del elevador M3 
+%Q0.3 
+YV1_C1 
+Compuerta de la celda 1 (1 = abierta) 
+%Q0.4 
+YV2_C2 
+Compuerta de la celda 2 (1 = abierta) 
+%Q0.5 
+BOCINA 
+Bocina de pre-arranque 
+%Q0.6 
+BALIZA 
+Baliza: intermitente con falla, fija con aviso 
+%Q0.7 
+PILOTO_MARCHA 
+Piloto verde: intermitente arrancando, fijo en marcha 
+ 
+Analógica 
+Símbolo 
+Descripción 
+Escala 
+%IW0.0 
+— 
+Presión diferencial del filtro (PDT-01) 
+0–10 V = 0–1000 = 0–3000 Pa 
+8. Mapa de memoria y símbolos 
+Cargar todos estos símbolos en la tabla de símbolos del programa, con el mismo nombre y dirección. Las 
+variables con sentido «SCADA» son las que se leen o escriben desde FUXA. 
+Dirección 
+Símbolo 
+Descripción 
+Sentido 
+%M0 
+EST_M1 
+M1 en marcha (copia de KM1) 
+PLC → SCADA 
+%M1 
+EST_M2 
+M2 en marcha 
+PLC → SCADA 
+%M2 
+EST_M3 
+M3 en marcha 
+PLC → SCADA 
+%M3 
+EST_YV1 
+Compuerta 1 abierta 
+PLC → SCADA 
+%M4 
+EST_YV2 
+Compuerta 2 abierta 
+PLC → SCADA 
+
+
+=== PÁGINA 8 ===
+Automatización Industrial — UTN Paraná 
+Página 8 
+Dirección 
+Símbolo 
+Descripción 
+Sentido 
+%M5 
+LINEA 
+Orden de marcha de la línea (memorizada) 
+PLC → SCADA 
+%M6 
+EST_BOCINA 
+Bocina sonando 
+PLC → SCADA 
+%M9 
+PERMISO 
+Permiso de marcha 
+PLC → SCADA 
+%M10 
+VIDA 
+Señal de vida: cambia cada 0,5 s 
+PLC → SCADA 
+%M20 
+AL_EMERG 
+Falla: emergencia 
+PLC → SCADA 
+%M21 
+AL_M1 
+Falla: guardamotor M1 
+PLC → SCADA 
+%M22 
+AL_M2 
+Falla: guardamotor M2 
+PLC → SCADA 
+%M23 
+AL_M3 
+Falla: guardamotor M3 
+PLC → SCADA 
+%M24 
+AL_GIRO 
+Falla: control de giro del elevador 
+PLC → SCADA 
+%M25 
+AL_DP_MUY_ALTA 
+Falla: ΔP del filtro muy alta 
+PLC → SCADA 
+%M26 
+AV_DP_ALTA 
+Aviso: ΔP del filtro alta 
+PLC → SCADA 
+%M27 
+AV_C1_LLENA 
+Aviso: celda 1 llena 
+PLC → SCADA 
+%M28 
+AV_C2_LLENA 
+Aviso: celda 2 llena 
+PLC → SCADA 
+%M29 
+AV_ARRANQUES 
+Aviso: 6 o más arranques en la hora 
+PLC → SCADA 
+%M30 
+FALLA_GRAL 
+Hay alguna falla (AL_…) 
+PLC → SCADA 
+%M40 
+CMD_MARCHA 
+Orden de marcha (pulso) 
+SCADA → PLC 
+%M41 
+CMD_PARADA 
+Orden de parada (pulso) 
+SCADA → PLC 
+%M42 
+CMD_RESET 
+Orden de reset de fallas (pulso) 
+SCADA → PLC 
+%M50 
+RESET_FALLAS 
+Pulso interno de reset 
+interno 
+%M52 
+DESTINO_LLENO 
+La celda elegida tiene nivel alto 
+interno 
+%M53 
+CELDA_VALIDA 
+La celda elegida es 1 o 2 
+interno 
+%MW0 
+— 
+Presión diferencial del filtro [Pa] 
+PLC → SCADA 
+%MW1 
+— 
+Arranques del elevador en la hora 
+PLC → SCADA 
+%MW10 
+— 
+Celda de destino elegida (1 o 2) 
+SCADA → PLC 
+ 
+Órdenes desde el SCADA 
+El SCADA escribe 1 en CMD_MARCHA, CMD_PARADA o CMD_RESET, y el PLC vuelve el bit a 0 
+después de usarlo (bobina RESET). Así, si se corta la comunicación, ninguna orden queda activa. 
+9. Temporizadores y contador asignados 
+Objeto 
+Símbolo 
+Tipo 
+Preset (base 1 s) 
+Función 
+%TM0 
+T_BOCINA 
+TP 
+5 
+Duración del aviso acústico de pre-arranque 
+%TM1 
+T_ARR_M2 
+TON 
+5 
+Espera entre el arranque de M1 y el de M2 
+%TM2 
+T_ARR_M3 
+TON 
+5 
+Espera entre el arranque de M2 y el de M3 
+%TM3 
+T_VACIADO 
+TOF 
+20 
+M2 sigue funcionando después de parar M3 
+%TM4 
+T_BARRIDO 
+TOF 
+30 
+M1 sigue funcionando después de parar M2 
+%TM5 
+T_GIRO 
+TON 
+5 
+Tiempo máximo con M3 en marcha sin señal de 
+giro 
+%TM6 
+T_DP_ALTA 
+TON 
+10 
+Retardo del aviso de ΔP alta 
+%TM7 
+T_DP_MUY_ALTA 
+TON 
+10 
+Retardo de la falla de ΔP muy alta 
+
+
+=== PÁGINA 9 ===
+Automatización Industrial — UTN Paraná 
+Página 9 
+Objeto 
+Símbolo 
+Tipo 
+Preset (base 1 s) 
+Función 
+%TM8 
+T_HORA 
+TON 
+3600 
+Ventana de 1 hora para el contador 
+%C0 
+C_ARRANQUES 
+CTU 
+6 
+Arranques del elevador en la hora 
+10. Estructura del programa 
+El programa se divide en siete secciones, en este orden. Cada rung debe llevar un comentario breve que diga 
+qué hace. 
+Sección 
+Nombre 
+Contenido 
+Clase 
+1 
+Generales 
+Señal de vida y pulso de reset 
+1 
+2 
+Fallas 
+Memoria de las fallas y falla general 
+1 
+3 
+Celdas y permiso 
+Celda elegida, compuertas, celda llena y permiso de marcha 
+2 
+4 
+Marcha y parada 
+Orden de marcha memorizada y temporizadores de la secuencia 
+2 
+5 
+Motores y bocina 
+Salidas KM1, KM2, KM3 y BOCINA 
+2 
+6 
+ΔP y contador 
+Escalado, alarmas de presión diferencial, contador de arranques 
+3 
+7 
+Señalización y SCADA 
+Baliza, piloto y copia de las salidas a bits %M 
+3 
+ 
+Notación de las ecuaciones que aparecen en las consignas: «·» significa contactos en serie (Y), «+» significa 
+ramas en paralelo (O) y «/» antes de un símbolo significa contacto NC. Ejemplo: A · (B + /C) es un contacto 
+A en serie con un paralelo formado por B y por un contacto NC de C. 
+ 
+ 
+
+
+=== PÁGINA 10 ===
+Automatización Industrial — UTN Paraná 
+Página 10 
+Consigna 1 — Clase 1: entorno, configuración y fallas 
+1.1 Preparación 
+1. Instalar Machine Expert – Basic y FUXA (Anexo A). 
+2. Crear el proyecto «TP2_Apellido» con el controlador TM221CE24R. En el puerto ETH1, verificar 
+que el servidor Modbus esté habilitado. Configurar la entrada analógica %IW0.0 en 0–10 V, escala 
+normal. 
+3. Cargar la tabla de símbolos completa (Sección 9 de este enunciado). 
+4. Crear las siete secciones del programa con sus nombres (Sección 11). 
+1.2 Sección 1 — Generales (2 rungs) 
+1. Señal de vida: VIDA es una copia de RELOJ_1S (%S6). 
+2. Pulso de reset: RESET_FALLAS se activa con CMD_RESET o con el flanco ascendente de 
+PB_RESET. En el mismo rung, una bobina RESET vuelve CMD_RESET a 0. 
+Ecuación: RESET_FALLAS = CMD_RESET + ↑PB_RESET (con una bobina RESET de CMD_RESET en 
+paralelo). El símbolo ↑ indica contacto de flanco ascendente. 
+1.3 Sección 2 — Fallas (12 rungs) 
+1. Emergencia y guardamotores (8 rungs, dos por señal). Rung de SET: la falla se memoriza cuando 
+la señal vale 0. Rung de RESET: se borra con RESET_FALLAS y la señal ya en 1. Los rungs de la 
+emergencia son los ejemplos Ej. 1 y Ej. 2 de la Figura 5; repetir el mismo esquema para GM1_OK → 
+AL_M1, GM2_OK → AL_M2 y GM3_OK → AL_M3. 
+2. Control de giro (3 rungs). T_GIRO (TON 5 s) se alimenta con KM3_ELEV · /GIRO_M3. Cuando 
+T_GIRO.Q = 1 → SET AL_GIRO. Reset con RESET_FALLAS · /T_GIRO.Q. 
+3. Falla general (1 rung): FALLA_GRAL es una bobina alimentada por seis contactos en paralelo: 
+AL_EMERG + AL_M1 + AL_M2 + AL_M3 + AL_GIRO + AL_DP_MUY_ALTA. La última se 
+programa en la clase 3, pero ya se incluye aquí. 
+1.4 Primera conexión con FUXA 
+1. En FUXA, crear una conexión Modbus TCP a 127.0.0.1, puerto 502. 
+2. Crear tres tags: VIDA (%M10) y AL_EMERG (%M20) como Coil, y CMD_RESET (%M42) como 
+Coil de escritura. 
+3. Dibujar una pantalla de prueba: una lámpara con VIDA, una lámpara con AL_EMERG y un botón 
+que escriba 1 en CMD_RESET. 
+4. Con el simulador en marcha: verificar que la lámpara de VIDA parpadea, que al poner %I0.0 en 0 se 
+enciende AL_EMERG, y que al volver %I0.0 a 1 y pulsar el botón, la falla se borra. 
+Pregunta 1: ¿qué número de dirección hubo que cargar en FUXA para leer %M10? Si el valor apareció 
+corrido una posición, explicar la diferencia entre la numeración Modbus que empieza en 0 y la que empieza 
+en 1. 
+Al terminar la clase 1 debe funcionar: la señal de vida en FUXA y todas las fallas, que se memorizan y se 
+resetean. 
+Consigna 2 — Clase 2: secuencia de la línea 
+2.1 Sección 3 — Celdas y permiso (7 rungs) 
+Rung 
+Resultado 
+Ecuación / instrucción 
+3.1 
+CELDA_VALIDA (bobina) 
+[%MW10 = 1] + [%MW10 = 2] 
+3.2 
+DESTINO_LLENO (bobina) 
+([%MW10 = 1] · LSH_C1) + ([%MW10 = 2] · LSH_C2) 
+3.3 
+AV_C1_LLENA (bobina) 
+LSH_C1 
+
+
+=== PÁGINA 11 ===
+Automatización Industrial — UTN Paraná 
+Página 11 
+Rung 
+Resultado 
+Ecuación / instrucción 
+3.4 
+AV_C2_LLENA (bobina) 
+LSH_C2 
+3.5 
+YV1_C1 (bobina) 
+[%MW10 = 1] · /AL_EMERG 
+3.6 
+YV2_C2 (bobina) 
+[%MW10 = 2] · /AL_EMERG 
+3.7 
+PERMISO (bobina) 
+PE_OK · /FALLA_GRAL · CELDA_VALIDA · /DESTINO_LLENO 
+2.2 Sección 4 — Marcha y parada (8 rungs) 
+Rung 
+Resultado 
+Ecuación / instrucción 
+4.1 
+SET LINEA 
+(CMD_MARCHA + ↑PB_MARCHA) · PERMISO 
+4.2 
+RESET LINEA 
+CMD_PARADA + /PB_PARADA + DESTINO_LLENO + 
+FALLA_GRAL 
+4.3 
+RESET CMD_MARCHA y RESET 
+CMD_PARADA 
+CMD_MARCHA + CMD_PARADA 
+4.4 
+T_BOCINA (TP 5 s) 
+LINEA 
+4.5 
+T_ARR_M2 (TON 5 s) 
+LINEA · KM1_ASPIR 
+4.6 
+T_ARR_M3 (TON 5 s) 
+LINEA · KM2_REDLER 
+4.7 
+T_VACIADO (TOF 20 s) 
+KM3_ELEV 
+4.8 
+T_BARRIDO (TOF 30 s) 
+KM2_REDLER 
+2.3 Sección 5 — Motores y bocina (4 rungs) 
+Cada motor se escribe en un solo rung con la forma: protecciones en serie × condición de marcha. 
+Rung 
+Resultado 
+Ecuación (protecciones · condición de marcha) 
+5.1 
+KM1_ASPIR (bobina) 
+PE_OK · /AL_EMERG · GM1_OK · /AL_M1 · ( LINEA · /T_BOCINA.Q  +  
+T_BARRIDO.Q ) 
+5.2 
+KM2_REDLER (bobina) 
+PE_OK · /AL_EMERG · GM2_OK · /AL_M2 · ( LINEA · T_ARR_M2.Q  +  
+KM2_REDLER · T_VACIADO.Q ) 
+5.3 
+KM3_ELEV (bobina) 
+PE_OK · /AL_EMERG · GM3_OK · /AL_M3 · /AL_GIRO · KM2_REDLER · 
+LINEA · T_ARR_M3.Q 
+5.4 
+BOCINA (bobina) 
+LINEA · T_BOCINA.Q 
+ 
+Preguntas 2 a 5 (responder en la memoria): 
+1. ¿Por qué el pulsador de PARADA se cablea NC y en el programa se usa con un contacto NC? 
+2. ¿Por qué el vaciado del redler se resuelve con un TOF y no con un TON? 
+3. ¿Qué función cumple el contacto KM2_REDLER en el rung de KM3? ¿Qué pasaría si no estuviera? 
+4. ¿Por qué la marcha local usa un flanco y no el contacto directo del pulsador? 
+Al terminar la clase 2 debe funcionar: arranque con bocina y escalonado, parada con vaciado y barrido, 
+parada por celda llena y paradas por falla (pruebas 1 a 8 del protocolo). 
+Consigna 3 — Clase 3: analógica, contador y señalización 
+3.1 Sección 6 — ΔP y contador (10 rungs) 
+Rung 
+Resultado 
+Ecuación / instrucción 
+6.1 
+Operación 
+%MW0 := %IW0.0 * 3      (Ej. 3) 
+6.2 
+T_DP_ALTA (TON 10 s) 
+[%MW0 > 1500]      (Ej. 4) 
+
+
+=== PÁGINA 12 ===
+Automatización Industrial — UTN Paraná 
+Página 12 
+Rung 
+Resultado 
+Ecuación / instrucción 
+6.3 
+AV_DP_ALTA (bobina) 
+T_DP_ALTA.Q      (Ej. 5) 
+6.4 
+T_DP_MUY_ALTA (TON 10 s) 
+[%MW0 > 2000] 
+6.5 
+SET AL_DP_MUY_ALTA 
+T_DP_MUY_ALTA.Q 
+6.6 
+RESET AL_DP_MUY_ALTA 
+RESET_FALLAS · /T_DP_MUY_ALTA.Q 
+6.7 
+T_HORA (TON 3600 s) 
+/T_HORA.Q   (se reinicia solo al terminar) 
+6.8 
+C_ARRANQUES (CTU, preset 6) 
+entrada CU = KM3_ELEV; entrada R = T_HORA.Q 
+6.9 
+AV_ARRANQUES (bobina) 
+[%C0.V >= 6] 
+6.10 
+Operación 
+%MW1 := %C0.V 
+Para probar el contador sin esperar una hora, cambiar temporalmente el preset de T_HORA a 120 s y 
+volverlo a 3600 s antes de entregar. 
+3.2 Sección 7 — Señalización y SCADA (8 rungs) 
+Rung 
+Resultado 
+Ecuación / instrucción 
+7.1 
+BALIZA (bobina) 
+FALLA_GRAL · RELOJ_1S  +  /FALLA_GRAL · ( AV_DP_ALTA + 
+AV_C1_LLENA + AV_C2_LLENA + AV_ARRANQUES ) 
+7.2 
+PILOTO_MARCHA 
+(bobina) 
+LINEA · ( KM3_ELEV + RELOJ_1S ) 
+7.3 a 7.8 
+EST_… (bobinas) 
+Copias para el SCADA, un rung cada una (ver abajo) 
+ 
+Copias para el SCADA (un rung cada una, contacto → bobina): KM1_ASPIR → EST_M1, KM2_REDLER 
+→ EST_M2, KM3_ELEV → EST_M3, YV1_C1 → EST_YV1, YV2_C2 → EST_YV2, BOCINA → 
+EST_BOCINA. 
+Preguntas 6 a 8: 
+1. ¿Por qué el valor de %IW0.0 se multiplica por 3? Verificar con un ejemplo: ¿cuántos Pa son 600 
+puntos? 
+2. ¿Para qué sirve el retardo de 10 s en las alarmas de presión diferencial? 
+3. ¿Por qué hay que copiar las salidas %Q a bits %M para verlas en el SCADA? 
+Consigna 4 — Clase 4: SCADA y pruebas 
+4.1 Pantalla «Proceso» 
+Armar la pantalla siguiendo la distribución de la Figura 6 (se pueden mejorar los dibujos, pero deben estar 
+todos los elementos). 
+
+
+=== PÁGINA 13 ===
+Automatización Industrial — UTN Paraná 
+Página 13 
+ 
+Figura 6 — Distribución de la pantalla «Proceso» en FUXA 
+Elemento 
+Tag 
+Comportamiento 
+Motores M1, M2, M3 
+EST_M1, EST_M2, EST_M3 y AL_M1, 
+AL_M2, AL_M3 / AL_GIRO 
+Gris parado · verde en marcha · rojo 
+intermitente con falla 
+Compuertas YV1, YV2 
+EST_YV1, EST_YV2 
+Gris cerrada · verde abierta 
+Nivel alto de celdas 
+AV_C1_LLENA, AV_C2_LLENA 
+Gris · amarillo con celda llena 
+ΔP del filtro 
+%MW0 
+Valor numérico con la unidad «Pa» 
+Arranques por hora 
+%MW1 
+Valor numérico 
+Botones MARCHA, 
+PARADA, RESET 
+CMD_MARCHA, CMD_PARADA, 
+CMD_RESET 
+Al hacer clic escriben 1 
+Botones Celda 1 y Celda 2 
+%MW10 
+Al hacer clic escriben 1 o 2 
+Texto «Destino: celda …» 
+%MW10 
+Muestra la celda elegida 
+Lámparas 
+PERMISO, LINEA, EST_BOCINA, VIDA 
+Verde activa · gris inactiva (VIDA debe 
+parpadear) 
+4.2 Pantalla «Alarmas» 
+Configurar en FUXA una alarma por cada bit, con estos textos. Las fallas (AL_) con prioridad alta y los 
+avisos (AV_) con prioridad baja. 
+Tag 
+Texto de la alarma 
+Prioridad 
+AL_EMERG 
+Parada de emergencia accionada 
+Alta 
+AL_M1 
+Disparo de guardamotor del ventilador M1 
+Alta 
+AL_M2 
+Disparo de guardamotor del redler M2 
+Alta 
+AL_M3 
+Disparo de guardamotor del elevador M3 
+Alta 
+AL_GIRO 
+Elevador sin giro (banda patinando o cortada) 
+Alta 
+AL_DP_MUY_ALTA 
+Presión diferencial muy alta: línea detenida 
+Alta 
+AV_DP_ALTA 
+Filtro colmatado: programar limpieza 
+Baja 
+AV_C1_LLENA 
+Celda 1 llena 
+Baja 
+AV_C2_LLENA 
+Celda 2 llena 
+Baja 
+
+
+=== PÁGINA 14 ===
+Automatización Industrial — UTN Paraná 
+Página 14 
+Tag 
+Texto de la alarma 
+Prioridad 
+AV_ARRANQUES 
+Exceso de arranques del elevador en la última hora 
+Baja 
+4.3 Protocolo de pruebas 
+Ejecutar cada prueba con el simulador y el SCADA, y completar la última columna. 
+N.º 
+Prueba 
+Acción 
+Resultado esperado 
+Obtenido / OK 
+1 
+Arranque normal 
+Celda 1; MARCHA 
+Bocina 5 s; M1, M2 y M3 con 5 s de diferencia; 
+YV1 abierta; piloto intermitente y luego fijo 
+ 
+2 
+Sin celda elegida 
+%MW10 = 0; MARCHA 
+No arranca, ni siquiera la bocina; PERMISO 
+apagado 
+ 
+3 
+Parada normal 
+PARADA con la línea en 
+marcha 
+M3 para en el acto; M2 a los 20 s; M1 30 s 
+después de M2 
+ 
+4 
+Pulsadores locales 
+Pulsar %I0.8; luego poner 
+%I0.9 en 0 
+Arranca con el flanco de MARCHA; se detiene al 
+abrir PARADA 
+ 
+5 
+Falla de M2 
+%I0.2 = 0 con la línea en 
+marcha 
+M2 y M3 paran en el acto; M1 sigue 30 s; baliza 
+intermitente 
+ 
+6 
+Falta de giro 
+Dejar %I0.4 en 0 al arrancar 
+M3 
+M3 para a los 5 s; falla AL_GIRO 
+ 
+7 
+Celda llena 
+%I0.5 = 1 con destino celda 1 
+Parada secuencial; no rearranca hasta elegir la 
+celda 2 
+ 
+8 
+Emergencia 
+%I0.0 = 0 
+Todo se detiene y las compuertas cierran; no 
+arranca sin RESET 
+ 
+9 
+Presión diferencial 
+%IW0.0 = 600, luego 700 
+1800 Pa: aviso y baliza fija; 2100 Pa: falla y 
+parada a los 10 s 
+ 
+10 
+Contador 
+6 arranques seguidos 
+%MW1 llega a 6; aviso AV_ARRANQUES 
+ 
+11 
+Comunicación 
+Detener el simulador 
+La lámpara VIDA deja de parpadear 
+ 
+Entrega y evaluación 
+• 
+Proyecto del PLC (archivo .smbp) con todos los símbolos y comentarios. 
+• 
+Proyecto de FUXA exportado (archivo .json). 
+• 
+Memoria breve en PDF: respuestas a las preguntas 1 a 8 y protocolo de pruebas completo. 
+• 
+Video de 3 a 5 minutos (grabación de pantalla) con las pruebas 1, 3, 5, 7 y 9. 
+• 
+Modalidad: individual. Plazo: a definir por la cátedra. 
+ 
+Aspecto 
+Peso 
+Programa: secuencia y paradas correctas (secciones 3 a 5) 
+35 % 
+Programa: fallas, analógica, contador y señalización (secciones 1, 2, 6 y 7) 
+25 % 
+Pantallas y alarmas en FUXA 
+20 % 
+Protocolo de pruebas, preguntas y video 
+15 % 
+Prolijidad: símbolos, comentarios y estructura respetada 
+5 % 
+ 
+ 
+
+
+=== PÁGINA 15 ===
+Automatización Industrial — UTN Paraná 
+Página 15 
+Anexo A — Instalación y primera conexión 
+A.1 EcoStruxure Machine Expert – Basic 
+1. Ingresar a se.com y buscar «EcoStruxure Machine Expert Basic». Descargar la versión 1.4 (gratuita; 
+puede pedir crear una cuenta). 
+2. Ejecutar el instalador como administrador. Para simular no hace falta instalar controladores USB. 
+3. Crear un proyecto nuevo. En Configuración, reemplazar el controlador por defecto por el 
+TM221CE24R. 
+4. En la configuración del puerto ETH1, verificar que el servidor Modbus esté habilitado. 
+5. En Programación, crear las secciones (POU) y escribir el programa en Ladder. 
+6. Para simular: comando Iniciar simulador, luego Login y Run. En la ventana del simulador las 
+entradas se cambian con un clic y las analógicas con un deslizador. 
+7. Si aparece «El simulador no responde», otro programa ocupa el puerto 502: identificarlo con el 
+comando netstat -anbp tcp (consola de Windows) y cerrarlo. 
+A.2 FUXA 
+1. Ingresar a github.com/frangoteam/FUXA, sección Releases, y descargar la aplicación para Windows. 
+Alternativa: instalar Node.js 18 LTS, ejecutar «npm install -g @frangoteam/fuxa» y luego «fuxa»; el 
+editor queda en http://localhost:1881. 
+2. Permitir el acceso cuando lo pida el firewall de Windows. 
+3. Conexiones → Agregar: tipo Modbus TCP, IP 127.0.0.1, puerto 502, sondeo 500 ms. El indicador 
+verde confirma la conexión (el simulador debe estar en Run). 
+4. Crear los tags: Coil para los %M y Holding Register para los %MW, con la dirección comprobada 
+en la Consigna 1. 
+A.3 Problemas frecuentes 
+Síntoma 
+Causa probable y solución 
+Los valores aparecen corridos una 
+posición 
+Numeración Modbus base 0 / base 1: sumar o restar 1 en la dirección del tag. 
+FUXA no conecta (indicador rojo) 
+El simulador no está en Run, o el puerto 502 está ocupado. 
+Una salida se comporta de forma rara 
+Revisar que no esté escrita como bobina en dos rungs. 
+Una orden del SCADA queda activa 
+Falta la bobina RESET que la vuelve a 0. 
+Un temporizador no hace nada 
+Revisar el tipo (TON/TOF/TP), la base de tiempo (1 s) y el preset. 
+ 
+
+

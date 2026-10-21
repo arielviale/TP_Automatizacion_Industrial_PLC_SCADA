@@ -1,0 +1,22 @@
+{
+  "httpPort": 8080,
+  "startVirtualPlc": true,
+  "virtualPort": 5020,
+  "target": "machine",
+  "targets": {
+    "virtual": {
+      "name": "PLC virtual",
+      "host": "127.0.0.1",
+      "port": 5020
+    },
+    "machine": {
+      "name": "Machine Expert Basic (simulador M221)",
+      "host": "127.0.0.1",
+      "port": 502
+    }
+  },
+  "unitId": 1,
+  "offset": 0,
+  "pollMs": 250,
+  "vidaTimeoutMs": 3000
+}

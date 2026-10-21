@@ -1,0 +1,68 @@
+===============================================================================
+UTN FACULTAD REGIONAL PARANÁ — TECNICATURA SUPERIOR EN MECATRÓNICA
+Asignatura: Automatización Industrial
+Trabajo Práctico Integrador — Parte 2: Programación PLC y Supervisión SCADA
+Línea de Llenado de Celdas (Sector Mezcla y Limpieza)
+Alumno: Hugo Ariel Martinez
+Proyecto PLC: Martinez.smbp (Modicon M221 TM221CE24R)
+===============================================================================
+
+INSTRUCCIONES DE PUESTA EN MARCHA Y EVALUACIÓN
+
+1. REQUISITOS DEL SISTEMA:
+   - Sistema Operativo: Windows 10 / 11
+   - Schneider EcoStruxure Machine Expert – Basic V1.4 (o superior)
+   - Node.js versión 18 o superior (https://nodejs.org/)
+
+-------------------------------------------------------------------------------
+2. PUESTA EN MARCHA DEL SISTEMA (EN 2 PASOS):
+
+   PASO 1: Iniciar el Simulador del PLC
+   a) Abrir EcoStruxure Machine Expert – Basic y cargar el proyecto "Martinez.smbp".
+   b) En la barra superior, presionar "Iniciar Simulador" (Ctrl + F9).
+   c) Poner el controlador en modo RUN (botón verde Play o pestaña Commissioning).
+   d) En la Tabla de Animación, asegurar las condiciones iniciales de seguridad:
+      - %I0.0 = 1 (Parada de emergencia NC en reposo)
+      - %I0.1 = 1 (Guardamotor M1 sano)
+      - %I0.2 = 1 (Guardamotor M2 sano)
+      - %I0.3 = 1 (Guardamotor M3 sano)
+      - %I0.4 = 1 (Sensor de giro SSL activo)
+      - %I0.9 = 1 (Pulsador de parada NC en reposo)
+      - %IW0.0 = 0 (Presión diferencial normal)
+
+   PASO 2: Iniciar la Supervisión SCADA
+   a) Hacer doble clic sobre el archivo "INICIAR_SCADA.bat".
+   b) Se abrirá automáticamente la consola del servidor y el navegador web en:
+      http://localhost:8080
+   c) En la pantalla del SCADA, presionar el botón "RESET DE FALLAS" para borrar
+      las alarmas de arranque y seleccionar "Celda 1".
+   d) Al iluminarse en verde el "Permiso de marcha (%M9)", presionar "MARCHA".
+
+-------------------------------------------------------------------------------
+3. ARQUITECTURA DE COMUNICACIONES:
+   - Capa de Control: PLC Modicon M221 (CPU TM221CE24R) actuando como Servidor
+     Modbus TCP nativo en 127.0.0.1 : 502.
+   - Capa SCADA: Cliente Modbus TCP con stack WebSocket para actualización
+     bidireccional en tiempo real (< 50 ms de latencia).
+   - Estándares aplicados:
+     * ISA-101 (High Performance HMI, diseño situacional y contrastes ergonómicos).
+     * ISA-18.2 (Gestión de ciclo de vida de alarmas y auditoría histórica).
+
+-------------------------------------------------------------------------------
+4. MODO AUTÓNOMO (LABORATORIO SIN SCHNEIDER):
+   Si no se dispone de Machine Expert instalado, el sistema incluye un simulador
+   de PLC virtual integrado (51 rungs en Node.js) y un Tablero de Campo interactivo
+   accesible desde el icono superior derecho de la pantalla web.
+
+-------------------------------------------------------------------------------
+5. CARPETA DE DOCUMENTACIÓN Y RESOLUCIÓN ("Resolucion/"):
+   - "Programa_Ladder_Completo_TP_Integrador.pdf" (DOCUMENTO PRINCIPAL):
+     Memoria técnica completa con los 51 rungs en Diagrama de Contactos (Ladder/LD),
+     símbolos, configuración de hardware M221 y justificación de seguridad fail-safe.
+   - "Resumen_Comparativo_Sistema_vs_TP.pdf":
+     Matriz ejecutiva de cumplimiento punto por punto frente al enunciado del TP.
+   - "Verificacion_Asignaciones_y_Guia_Consignas_TP.pdf":
+     Guía metodológica de puesta en marcha, ensayos y tabla de verdad.
+   - "01_Programa_PLC.md" a "05_Documentacion_SCADA_Propio.md":
+     Archivos fuentes en Markdown con la totalidad de respuestas y diagramas.
+===============================================================================

@@ -1,0 +1,59 @@
+Symbol;Address;Comment
+PE_OK;%I0.0;Parada de emergencia NC - 1 = sin emergencia
+GM1_OK;%I0.1;Guardamotor M1 - 1 = OK
+GM2_OK;%I0.2;Guardamotor M2 - 1 = OK
+GM3_OK;%I0.3;Guardamotor M3 - 1 = OK
+GIRO_M3;%I0.4;Control de giro elevador - 1 = gira normal
+LSH_C1;%I0.5;Nivel alto celda 1 - 1 = llena
+LSH_C2;%I0.6;Nivel alto celda 2 - 1 = llena
+PB_RESET;%I0.7;Pulsador RESET NA - 1 = pulsado
+PB_MARCHA;%I0.8;Pulsador MARCHA NA - 1 = pulsado
+PB_PARADA;%I0.9;Pulsador PARADA NC - 1 = no pulsado
+KM1_ASPIR;%Q0.0;Contactor ventilador aspiracion M1
+KM2_REDLER;%Q0.1;Contactor redler M2
+KM3_ELEV;%Q0.2;Contactor elevador M3
+YV1_C1;%Q0.3;Compuerta celda 1 (1 = abierta)
+YV2_C2;%Q0.4;Compuerta celda 2 (1 = abierta)
+BOCINA;%Q0.5;Bocina de pre-arranque
+BALIZA;%Q0.6;Baliza: intermitente falla / fija aviso
+PILOTO_MARCHA;%Q0.7;Piloto verde: intermitente arrancando / fijo en marcha
+RELOJ_1S;%S6;Reloj de sistema 1 s
+EST_M1;%M0;M1 en marcha (copia KM1) - SCADA
+EST_M2;%M1;M2 en marcha - SCADA
+EST_M3;%M2;M3 en marcha - SCADA
+EST_YV1;%M3;Compuerta 1 abierta - SCADA
+EST_YV2;%M4;Compuerta 2 abierta - SCADA
+LINEA;%M5;Orden de marcha de la linea (memorizada)
+EST_BOCINA;%M6;Bocina sonando - SCADA
+PERMISO;%M9;Permiso de marcha
+VIDA;%M10;Senal de vida 0,5 s - SCADA
+AL_EMERG;%M20;Falla: emergencia
+AL_M1;%M21;Falla: guardamotor M1
+AL_M2;%M22;Falla: guardamotor M2
+AL_M3;%M23;Falla: guardamotor M3
+AL_GIRO;%M24;Falla: control de giro del elevador
+AL_DP_MUY_ALTA;%M25;Falla: DP filtro muy alta
+AV_DP_ALTA;%M26;Aviso: DP filtro alta
+AV_C1_LLENA;%M27;Aviso: celda 1 llena
+AV_C2_LLENA;%M28;Aviso: celda 2 llena
+AV_ARRANQUES;%M29;Aviso: 6 o mas arranques en la hora
+FALLA_GRAL;%M30;Hay alguna falla AL_
+CMD_MARCHA;%M40;Orden de marcha (pulso) SCADA -> PLC
+CMD_PARADA;%M41;Orden de parada (pulso) SCADA -> PLC
+CMD_RESET;%M42;Orden de reset de fallas (pulso) SCADA -> PLC
+RESET_FALLAS;%M50;Pulso interno de reset
+DESTINO_LLENO;%M52;La celda elegida tiene nivel alto
+CELDA_VALIDA;%M53;La celda elegida es 1 o 2
+DP_PA;%MW0;Presion diferencial del filtro [Pa]
+ARRANQUES_H;%MW1;Arranques del elevador en la hora
+CELDA_DESTINO;%MW10;Celda de destino elegida (1 o 2) SCADA -> PLC
+T_BOCINA;%TM0;TP 5 s - aviso acustico pre-arranque
+T_ARR_M2;%TM1;TON 5 s - espera M1 -> M2
+T_ARR_M3;%TM2;TON 5 s - espera M2 -> M3
+T_VACIADO;%TM3;TOF 20 s - M2 sigue tras parar M3
+T_BARRIDO;%TM4;TOF 30 s - M1 sigue tras parar M2
+T_GIRO;%TM5;TON 5 s - max M3 sin senal de giro
+T_DP_ALTA;%TM6;TON 10 s - retardo aviso DP alta
+T_DP_MUY_ALTA;%TM7;TON 10 s - retardo falla DP muy alta
+T_HORA;%TM8;TON 3600 s - ventana de 1 hora
+C_ARRANQUES;%C0;CTU preset 6 - arranques elevador por hora
