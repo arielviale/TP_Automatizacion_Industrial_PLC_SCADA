@@ -64,6 +64,9 @@ El sistema opera bajo una arquitectura de tres capas:
 | `40`| `CMD_MARCHA`| Orden de marcha desde SCADA | Botón MARCHA (pulso generado por operador) |
 | `41`| `CMD_PARADA`| Orden de parada desde SCADA | Botón PARADA (pulso generado por operador) |
 | `42`| `CMD_RESET` | Orden de rearme de fallas desde SCADA | Botón RESET DE FALLAS |
+| `50`| `RESET_FALLAS`| Pulso interno de reset unificado | Diagnóstico interno de rearme |
+| `52`| `DESTINO_LLENO`| La celda seleccionada tiene nivel alto | Diagnóstico de bloqueo de permiso en SCADA |
+| `53`| `CELDA_VALIDA` | La celda seleccionada es válida (1 o 2) | Diagnóstico de habilitación de permiso en SCADA |
 
 ### 3.2 Holding Registers (%MW) — Funciones Modbus 03 (Lectura) y 06/16 (Escritura)
 

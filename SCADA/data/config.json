@@ -2,7 +2,7 @@
   "httpPort": 8080,
   "startVirtualPlc": true,
   "virtualPort": 5020,
-  "target": "machine",
+  "target": "virtual",
   "targets": {
     "virtual": {
       "name": "PLC virtual",

@@ -902,7 +902,7 @@ html_content = r"""<!DOCTYPE html>
           <td><code>%M50</code></td>
           <td><code>RESET_FALLAS</code></td>
           <td>Pulso interno de rearme de fallas</td>
-          <td>Interno PLC</td>
+          <td>Interno / SCADA</td>
           <td>Rung 1.2: <code>CMD_RESET + ↑PB_RESET</code></td>
           <td class="text-center"><span class="badge badge-ok">CONFORME</span></td>
         </tr>
@@ -910,7 +910,7 @@ html_content = r"""<!DOCTYPE html>
           <td><code>%M52</code></td>
           <td><code>DESTINO_LLENO</code></td>
           <td>Celda seleccionada tiene nivel alto</td>
-          <td>Interno PLC</td>
+          <td>Interno / SCADA</td>
           <td>Rung 3.2: Comparación cruzada %MW10</td>
           <td class="text-center"><span class="badge badge-ok">CONFORME</span></td>
         </tr>
@@ -918,7 +918,7 @@ html_content = r"""<!DOCTYPE html>
           <td><code>%M53</code></td>
           <td><code>CELDA_VALIDA</code></td>
           <td>Celda de destino es válida (1 o 2)</td>
-          <td>Interno PLC</td>
+          <td>Interno / SCADA</td>
           <td>Rung 3.1: <code>[%MW10=1] + [%MW10=2]</code></td>
           <td class="text-center"><span class="badge badge-ok">CONFORME</span></td>
         </tr>

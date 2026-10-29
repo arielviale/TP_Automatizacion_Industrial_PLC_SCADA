@@ -314,8 +314,10 @@ function renderSnapshot(snap) {
   const whyList = document.getElementById('list-permiso-reasons');
   if (!tags.PERMISO) {
     const reasons = [];
-    if (!tags.CELDA_VALIDA && celda === 0) reasons.push('Falta seleccionar celda de destino (Celda 1 o Celda 2).');
-    if (tags.DESTINO_LLENO) reasons.push('La celda de destino seleccionada se encuentra LLENA (LSH activo).');
+    if (!tags.CELDA_VALIDA && celda !== 1 && celda !== 2) reasons.push('Falta seleccionar celda de destino (Celda 1 o Celda 2).');
+    if (tags.DESTINO_LLENO || (celda === 1 && tags.AV_C1_LLENA) || (celda === 2 && tags.AV_C2_LLENA)) {
+      reasons.push('La celda de destino seleccionada se encuentra LLENA (LSH activo).');
+    }
     if (tags.FALLA_GRAL) reasons.push('Hay al menos una falla activa no rearmada (requiere RESET).');
     if (tags.AL_EMERG) reasons.push('Parada de emergencia accionada.');
     
@@ -372,9 +374,16 @@ function renderSnapshot(snap) {
   // 5. Animación del Proceso SVG (Motores, Silos, Caída de Grano)
   updateProcessSVG(tags, celda, sim);
 
-  // 6. Barra de Secuencia de Tiempos
+  // 6. Barra de Secuencia de Tiempos y Temporizador de Ventana Horaria (%TM8)
   const effectiveTM = getEffectiveTimers(snap);
   updateSequenceBar(tags, effectiveTM);
+  const txtHoraTimer = document.getElementById('txt-hora-timer');
+  if (txtHoraTimer && effectiveTM) {
+    const t8 = Number(effectiveTM[8]) || 0;
+    const mins = Math.floor(t8 / 60);
+    const secs = t8 % 60;
+    txtHoraTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} (${t8}/3600 s)`;
+  }
 
   // 7. Lista de Alarmas Activas y Badge
   updateActiveAlarms(alarms);
@@ -401,8 +410,11 @@ function updateProcessSVG(tags, celda, sim) {
   setMotorState('grp-m2', tags.EST_M2, tags.AL_M2);
   setMotorState('grp-m3', tags.EST_M3, tags.AL_M3 || tags.AL_GIRO);
 
-  // Flujo en conductos de aspiración (M1)
-  document.getElementById('flow-duct-m3').parentElement.classList.toggle('running', !!tags.EST_M1);
+  // Flujo en conductos de aspiración y carcasa de M1
+  const grpDucts = document.getElementById('grp-ducts');
+  if (grpDucts) grpDucts.classList.toggle('running', !!tags.EST_M1);
+  const grpM1Struct = document.getElementById('grp-m1-struct');
+  if (grpM1Struct) grpM1Struct.classList.toggle('running', !!tags.EST_M1);
 
   // Elevador M3 Cangilones
   document.getElementById('grp-m3-struct').classList.toggle('running', !!tags.EST_M3);
@@ -413,7 +425,8 @@ function updateProcessSVG(tags, celda, sim) {
   // Sensor SSL Giro en pie de elevador
   const ledSsl = document.getElementById('led-ssl');
   if (ledSsl) {
-    ledSsl.style.fill = (sim && sim.I[4]) ? 'var(--run)' : '#303f50';
+    const sslOk = sim ? !!sim.I[4] : (!!tags.EST_M3 && !tags.AL_GIRO);
+    ledSsl.style.fill = sslOk ? 'var(--run)' : '#303f50';
   }
 
   // Compuertas YV1 y YV2
@@ -494,17 +507,17 @@ function getEffectiveTimers(snap) {
     !!(tags.LINEA && tags.EST_M2 && !tags.EST_M3),              // %TM2 Arr M3
     !!(!tags.LINEA && tags.EST_M2),                             // %TM3 Vaciado M2 (20s)
     !!(!tags.LINEA && !tags.EST_M2 && tags.EST_M1),            // %TM4 Barrido M1 (30s)
-    !!(tags.EST_M3 && !tags.AL_GIRO && tags.SSL === false),     // %TM5 Giro M3
-    !!(dp >= 1500 && !tags.AV_DP_ALTA),                         // %TM6 DP Alta
-    !!(dp >= 2000 && !tags.AL_DP_MUY_ALTA),                     // %TM7 DP Muy Alta
-    false                                                       // %TM8 Hora
+    false,                                                      // %TM5 Giro M3 (en M221 solo discurre ante falla de giro)
+    !!(dp > 1500 && !tags.AV_DP_ALTA),                          // %TM6 DP Alta
+    !!(dp > 2000 && !tags.AL_DP_MUY_ALTA),                      // %TM7 DP Muy Alta
+    !!(snap.conn && snap.conn.status === 'up')                  // %TM8 Hora (ciclo continuo de 3600s con PLC en RUN)
   ];
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 9; i++) {
     if (activeConditions[i]) {
       if (!timerTracker.starts[i]) timerTracker.starts[i] = now;
       const elapsed = Math.floor((now - timerTracker.starts[i]) / 1000);
-      timerTracker.values[i] = Math.min(presets[i], elapsed);
+      timerTracker.values[i] = i === 8 ? (elapsed % presets[i]) : Math.min(presets[i], elapsed);
     } else {
       timerTracker.starts[i] = null;
       timerTracker.values[i] = 0;
@@ -839,11 +852,11 @@ function initFieldPanel() {
   const dqC1 = document.getElementById('dq-btn-c1');
   const dqC2 = document.getElementById('dq-btn-c2');
 
-  if (dqMarcha) dqMarcha.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'marcha' }));
-  if (dqParada) dqParada.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'parada' }));
-  if (dqReset) dqReset.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'reset' }));
-  if (dqC1) dqC1.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'celda', value: 1 }));
-  if (dqC2) dqC2.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'celda', value: 2 }));
+  if (dqMarcha) dqMarcha.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'CMD_MARCHA' }));
+  if (dqParada) dqParada.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'CMD_PARADA' }));
+  if (dqReset) dqReset.addEventListener('click', () => sendMsg({ t: 'cmd', name: 'CMD_RESET' }));
+  if (dqC1) dqC1.addEventListener('click', () => sendMsg({ t: 'celda', value: 1 }));
+  if (dqC2) dqC2.addEventListener('click', () => sendMsg({ t: 'celda', value: 2 }));
 
   const isVirtual = () => lastSnap && lastSnap.conn && lastSnap.conn.virtual;
 

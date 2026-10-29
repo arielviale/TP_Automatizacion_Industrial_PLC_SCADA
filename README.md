@@ -59,7 +59,7 @@ flowchart LR
     end
 
     subgraph Capa_Comunicaciones["Gateway Industrial"]
-        GW["Node.js Modbus TCP Client<br>Puerto 502 / Polling 100 ms<br>WebSocket Server Broadcast"]
+        GW["Node.js Modbus TCP Client<br>Puerto 502 / Polling 250 ms<br>WebSocket Server Broadcast"]
     end
 
     subgraph Capa_Supervisión["HMI / SCADA Web"]
@@ -95,7 +95,7 @@ flowchart LR
 | `%Q0.5` | `BOCINA` | DO (Relé) | Sirena acústica aviso de pre-arranque (5 s) |
 | `%Q0.6` | `BALIZA` | DO (Relé) | Baliza luminosa (fija = aviso / destello 1 Hz = alarma crítica) |
 | `%Q0.7` | `PILOTO_MARCHA`| DO (Relé) | Piloto verde (destello = arrancando / fijo = régimen) |
-| `%IW0.0` | — | AI (0–10 V)| Presión diferencial PDT-01 (0..1000 pts = 0..3000 Pa) |
+| `%IW0.0` | `PDT_01` | AI (0–10 V)| Presión diferencial PDT-01 (0..1000 pts = 0..3000 Pa) |
 
 ### 2. Variables Modbus TCP e Interfaz SCADA
 | Dirección | Símbolo / Variable | Sentido | Función y Comportamiento |
@@ -110,6 +110,7 @@ flowchart LR
 | `%M26..%M29`| `AV_DP..AV_ARR` | PLC ➔ SCADA | Advertencias preventivas en planta (Filtro, Celdas, Arranques) |
 | `%M30` | `FALLA_GRAL` | PLC ➔ SCADA | Concentrador lógico OR de fallas críticas |
 | `%M40..%M42`| `CMD_MARCHA/PARADA/RESET` | SCADA ➔ PLC | Mandos de operación remota desde el SCADA |
+| `%M50, %M52, %M53` | `RESET_FALLAS, DESTINO_LLENO, CELDA_VALIDA` | PLC ➔ SCADA | Bits auxiliares internos de diagnóstico y validación de destino |
 | `%MW0` | `DP_PA` | PLC ➔ SCADA | Presión diferencial escalada en pascales [0..3000 Pa] |
 | `%MW1` | `ARRANQUES_H` | PLC ➔ SCADA | Cantidad de arranques del elevador en la última hora |
 | `%MW10` | `CELDA_DESTINO` | SCADA ➔ PLC | Selección de celda de destino (1 o 2) |

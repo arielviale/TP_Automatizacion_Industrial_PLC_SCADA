@@ -705,7 +705,7 @@
   <div class="callout">
     <div class="callout-title">Diagrama de Flujo y Topología de Comunicaciones</div>
     <b>Planta / Controlador</b> (M221 Schneider en puerto 502 / PLC Virtual en puerto 5020) 
-    ➔ <b>Modbus TCP</b> (Lectura cíclica de Coils %M0–%M42 y Registros %MW0–%MW10 cada 100 ms) 
+    ➔ <b>Modbus TCP</b> (Lectura cíclica de Coils %M0–%M53 y Registros %MW0–%MW10 cada 250 ms) 
     ➔ <b>Gateway Node.js</b> (Serialización asíncrona, descarte de jitter, web server HTTP port 8080) 
     ➔ <b>WebSocket Bidireccional</b> (&lt; 15 ms de latencia) 
     ➔ <b>HMI Web Nativa</b> (SVG vectorial responsive, motor Web Audio API, ISA-101 / ISA-18.2).

@@ -106,7 +106,7 @@
               </InstructionLineEntity>
             </InstructionLines>
             <Name />
-            <MainComment />
+            <MainComment>Señal de vida: copia el reloj de 1 s (%S6) a VIDA (%M10)</MainComment>
             <Label />
             <IsLadderSelected>true</IsLadderSelected>
           </RungEntity>
@@ -7055,6 +7055,7 @@
           <AnalogIO>
             <Address>%IW0.0</Address>
             <Index>0</Index>
+            <Symbol>PDT_01</Symbol>
             <Comment>Presion diferencial filtro PDT-01</Comment>
             <Type>
               <Value>0</Value>
