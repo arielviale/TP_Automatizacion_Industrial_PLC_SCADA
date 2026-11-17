@@ -31,12 +31,16 @@ INSTRUCCIONES DE PUESTA EN MARCHA Y EVALUACIÓN
       - %IW0.0 = 0 (Presión diferencial normal)
 
    PASO 2: Iniciar la Supervisión SCADA
-   a) Hacer doble clic sobre el archivo "INICIAR_SCADA.bat".
-   b) Se abrirá automáticamente la consola del servidor y el navegador web en:
+   a) Si descargó el proyecto en formato .ZIP desde GitHub, descomprima primero
+      toda la carpeta en su PC.
+   b) Haga CLIC DERECHO sobre el archivo "INICIAR_SCADA.bat" y seleccione
+      "Ejecutar como administrador" (evita el bloqueo SmartScreen de Windows
+      para archivos .bat descargados de internet).
+   c) Se abrirá automáticamente la consola del servidor y el navegador web en:
       http://localhost:8080
-   c) En la pantalla del SCADA, presionar el botón "RESET DE FALLAS" para borrar
+   d) En la pantalla del SCADA, presionar el botón "RESET DE FALLAS" para borrar
       las alarmas de arranque y seleccionar "Celda 1".
-   d) Al iluminarse en verde el "Permiso de marcha (%M9)", presionar "MARCHA".
+   e) Al iluminarse en verde el "Permiso de marcha (%M9)", presionar "MARCHA".
 
 -------------------------------------------------------------------------------
 3. ARQUITECTURA DE COMUNICACIONES:

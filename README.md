@@ -150,7 +150,7 @@ Desarrollado bajo los más altos estándares de ergonomía visual e ingeniería 
 >
 > 1. **Descargar el proyecto:** En la parte superior de esta página de GitHub, haz clic en el botón verde **`<> Code`** y selecciona **`Download ZIP`** (o clónalo con `git clone https://github.com/arielviale/TP_Automatizacion_Industrial_PLC_SCADA.git`).
 > 2. **Descomprimir el archivo ZIP:** Haz clic derecho sobre el archivo `.zip` descargado y selecciona **"Extraer todo..."** (*Extract All*) en cualquier carpeta de tu PC (por ejemplo, en el Escritorio).
-> 3. **Ejecutar el sistema:** Entra a la carpeta extraída y haz doble clic en **`INICIAR_SCADA.bat`** (o abre una terminal en esa carpeta y ejecuta `node SCADA/server/gateway.js --open`). Se abrirá la ventana del servidor y automáticamente tu navegador en **`http://localhost:8080`**.
+> 3. **Ejecutar el sistema:** Entra a la carpeta extraída, haz **clic derecho sobre `INICIAR_SCADA.bat`** y selecciona **"Ejecutar como administrador"** *(esto evita que el filtro de seguridad de Windows bloquee el script por provenir de un `.zip` descargado de internet)*. Se abrirá la consola del servidor y automáticamente tu navegador en **`http://localhost:8080`**.
 
 ### Requisitos Previos
 * Windows 10 u 11.
@@ -158,7 +158,7 @@ Desarrollado bajo los más altos estándares de ergonomía visual e ingeniería 
 * **EcoStruxure Machine Expert – Basic V1.4** (Schneider Electric) *(opcional, ya que el proyecto incluye el PLC Virtual M221 integrado activo por defecto)*.
 
 ### Modo 1: Modo Autónomo Inmediato (Por defecto — Sin necesidad de abrir Machine Expert)
-1. En la carpeta descargada y descomprimida en tu PC, haz doble clic en **`INICIAR_SCADA.bat`**.
+1. En la carpeta descargada y descomprimida en tu PC, haz **clic derecho en `INICIAR_SCADA.bat` ➔ "Ejecutar como administrador"**.
 2. El sistema iniciará automáticamente el **PLC Virtual Integrado (`127.0.0.1:5020`)** y abrirá **`http://localhost:8080`** en tu navegador.
 3. En la pantalla del SCADA (derecha), selecciona **`Celda 1`** o **`Celda 2`** y presiona **`▶ MARCHA`** para observar toda la secuencia:
    * `0 a 5 s`: Bocina de pre-aviso sonando (`%Q0.5`) y piloto de marcha intermitente.
