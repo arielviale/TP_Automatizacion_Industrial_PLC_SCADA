@@ -142,29 +142,42 @@ Desarrollado bajo los más altos estándares de ergonomía visual e ingeniería 
 
 ---
 
-## 🚀 Guía Rápida de Puesta en Marcha
+## 🚀 Guía Rápida de Puesta en Marcha (Paso a Paso)
+
+> [!IMPORTANT]
+> **¿Cómo descargar y ejecutar desde GitHub?**
+> `http://localhost:8080` es un servidor local que debe estar corriendo en tu computadora para poder abrirse en el navegador. **No se puede ejecutar haciendo clic sobre `INICIAR_SCADA.bat` dentro de la página web de GitHub.** Sigue estos 3 pasos:
+>
+> 1. **Descargar el proyecto:** En la parte superior de esta página de GitHub, haz clic en el botón verde **`<> Code`** y selecciona **`Download ZIP`** (o clónalo con `git clone https://github.com/arielviale/TP_Automatizacion_Industrial_PLC_SCADA.git`).
+> 2. **Descomprimir el archivo ZIP:** Haz clic derecho sobre el archivo `.zip` descargado y selecciona **"Extraer todo..."** (*Extract All*) en cualquier carpeta de tu PC (por ejemplo, en el Escritorio).
+> 3. **Ejecutar el sistema:** Entra a la carpeta extraída y haz doble clic en **`INICIAR_SCADA.bat`** (o abre una terminal en esa carpeta y ejecuta `node SCADA/server/gateway.js --open`). Se abrirá la ventana del servidor y automáticamente tu navegador en **`http://localhost:8080`**.
 
 ### Requisitos Previos
 * Windows 10 u 11.
-* **EcoStruxure Machine Expert – Basic V1.4** (Schneider Electric).
-* **Node.js** (v18 o superior).
+* **Node.js** (v18 o superior — descargable desde [nodejs.org](https://nodejs.org/)). *Nota: Todas las librerías (`node_modules`) ya están incluidas en el repositorio para funcionar sin necesidad de conexión a internet.*
+* **EcoStruxure Machine Expert – Basic V1.4** (Schneider Electric) *(opcional, ya que el proyecto incluye el PLC Virtual M221 integrado activo por defecto)*.
 
-### Modo 1: Enlazado con Simulador Schneider Machine Expert Basic
+### Modo 1: Modo Autónomo Inmediato (Por defecto — Sin necesidad de abrir Machine Expert)
+1. En la carpeta descargada y descomprimida en tu PC, haz doble clic en **`INICIAR_SCADA.bat`**.
+2. El sistema iniciará automáticamente el **PLC Virtual Integrado (`127.0.0.1:5020`)** y abrirá **`http://localhost:8080`** en tu navegador.
+3. En la pantalla del SCADA (derecha), selecciona **`Celda 1`** o **`Celda 2`** y presiona **`▶ MARCHA`** para observar toda la secuencia:
+   * `0 a 5 s`: Bocina de pre-aviso sonando (`%Q0.5`) y piloto de marcha intermitente.
+   * `5 s`: Arranque de Aspiración `M1` (`%Q0.0`).
+   * `10 s`: Arranque de Redler `M2` (`%Q0.1`).
+   * `15 s`: Arranque de Elevador `M3` (`%Q0.2`), piloto fijo y llenado progresivo del silo.
+4. Para simular fallas o vaciar los silos cuando lleguen al `95%`, haz clic en el botón **`[◧]`** (arriba a la derecha del SCADA, al lado de la hora) para desplegar el **Tablero Local y Simulación de Campo**.
+
+### Modo 2: Enlazado con Simulador Schneider Machine Expert Basic (`Martinez.smbp`)
 1. Abrir EcoStruxure Machine Expert – Basic y cargar el proyecto **`Martinez.smbp`**.
-2. Presionar **Iniciar Simulador** (Ctrl + F9) y poner el PLC en modo **RUN**.
-3. En la pestaña *Tabla de animación*, forzar a **1** las entradas de seguridad:
+2. Presionar **Iniciar Simulador** (`Ctrl + B` / `Ctrl + F9`) y poner el PLC en modo **RUN**.
+3. En la pestaña *Tabla de animación*, forzar a **`1`** las entradas de seguridad (contacto normal cerrado / giro):
    * `%I0.0` = 1 (Parada de emergencia en reposo)
    * `%I0.1`, `%I0.2`, `%I0.3` = 1 (Guardamotores sanos)
    * `%I0.4` = 1 (Sensor de giro OK)
    * `%I0.9` = 1 (Pulsador de parada NC en reposo)
-4. Hacer doble clic en el lanzador **`INICIAR_SCADA.bat`** (en la raíz del proyecto).
-5. Se abrirá automáticamente el navegador en `http://localhost:8080`.
+4. Hacer doble clic en **`INICIAR_SCADA.bat`** para abrir `http://localhost:8080`.
+5. Hacer clic en el indicador superior de conexión (`PLC virtual · 127.0.0.1:5020`), cambiar el destino a **`Machine Expert Basic (simulador M221 — 127.0.0.1:502)`** y guardar.
 6. En el SCADA, presionar **`RESET DE FALLAS`**, seleccionar **`Celda 1`** y pulsar **`▶ MARCHA`**.
-
-### Modo 2: Modo Autónomo (Demostración de Laboratorio sin Schneider)
-1. Ejecutar directamente **`INICIAR_SCADA.bat`**.
-2. Abrir el modal de configuración (haciendo clic sobre el indicador de conexión en el header) y seleccionar **PLC Virtual Integrado**.
-3. El sistema ejecutará el modelo dinámico completo con simulación de carga y giro automático.
 
 ---
 

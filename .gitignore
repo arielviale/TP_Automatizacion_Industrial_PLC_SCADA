@@ -1,7 +1,4 @@
-# Dependencias de Node.js
-node_modules/
-SCADA/node_modules/
-package-lock.json
+# Logs de depuración npm/yarn
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

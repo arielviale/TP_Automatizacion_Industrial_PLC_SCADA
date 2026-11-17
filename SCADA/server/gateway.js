@@ -14,13 +14,21 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const ModbusRTU = require('modbus-serial');
-const { WebSocketServer } = require('ws');
+const { execSync, exec } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 const DATA = path.join(ROOT, 'data');
 fs.mkdirSync(DATA, { recursive: true });
+
+// Auto-instalación preventiva si se clonó de GitHub sin node_modules
+if (!fs.existsSync(path.join(ROOT, 'node_modules', 'modbus-serial')) || !fs.existsSync(path.join(ROOT, 'node_modules', 'ws'))) {
+  console.log('[SCADA] Instalando dependencias en primera ejecución...');
+  execSync('npm install --no-audit --no-fund', { cwd: ROOT, stdio: 'inherit' });
+}
+
+const ModbusRTU = require('modbus-serial');
+const { WebSocketServer } = require('ws');
 
 // ------------------------------------------------------------------ Configuración
 const CFG_FILE = path.join(DATA, 'config.json');
@@ -273,9 +281,36 @@ wss.on('connection', (ws) => {
 });
 
 // ------------------------------------------------------------------ Arranque
-if (cfg.startVirtualPlc) require('./plc-virtual').start(cfg.virtualPort, { host: '127.0.0.1' });
+const shouldOpenBrowser = process.argv.includes('--open') || process.env.OPEN_BROWSER === '1';
+function openBrowser(url) {
+  if (!shouldOpenBrowser) return;
+  const cmd = process.platform === 'win32' ? `start "" "${url}"` : process.platform === 'darwin' ? `open "${url}"` : `xdg-open "${url}"`;
+  exec(cmd, () => {});
+}
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    const url = `http://localhost:${cfg.httpPort}`;
+    console.log(`[SCADA] El servidor ya se encuentra en ejecución → ${url}`);
+    openBrowser(url);
+    process.exit(0);
+  } else {
+    console.error('[SCADA] Error al iniciar servidor HTTP:', err.message);
+    process.exit(1);
+  }
+});
+
 server.listen(cfg.httpPort, () => {
-  console.log(`[SCADA] Gateway listo → http://localhost:${cfg.httpPort}`);
+  if (cfg.startVirtualPlc) {
+    try {
+      require('./plc-virtual').start(cfg.virtualPort, { host: '127.0.0.1' });
+    } catch (e) {
+      console.warn('[PLC virtual] Aviso al iniciar puerto 5020:', e.message);
+    }
+  }
+  const url = `http://localhost:${cfg.httpPort}`;
+  console.log(`[SCADA] Gateway listo → ${url}`);
   console.log(`[SCADA] Destino: ${cfg.targets[cfg.target].name} (${cfg.targets[cfg.target].host}:${cfg.targets[cfg.target].port})`);
+  openBrowser(url);
   setTimeout(loop, 300);
 });

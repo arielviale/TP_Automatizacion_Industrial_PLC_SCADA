@@ -23,9 +23,9 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if not exist "node_modules\" (
+if not exist "node_modules\modbus-serial\" (
     echo [2/3] Instalando dependencias necesarias (primera ejecucion)...
-    call npm install
+    call npm install --no-audit --no-fund
     if %errorlevel% neq 0 (
         color 0C
         echo [ERROR] No se pudieron instalar las dependencias.
@@ -40,17 +40,14 @@ echo [3/3] Iniciando Gateway de Comunicaciones Modbus TCP / WebSocket...
 echo.
 echo -------------------------------------------------------------------------------
 echo  - Servidor SCADA Web:   http://localhost:8080
-echo  - Enlace Modbus TCP:    127.0.0.1:502 (Simulador Schneider M221)
-echo                          127.0.0.1:5020 (PLC Virtual Integrado)
+echo  - Enlace Modbus TCP:    127.0.0.1:5020 (PLC Virtual Integrado - Activo por defecto)
+echo                          127.0.0.1:502  (Simulador Schneider M221)
 echo -------------------------------------------------------------------------------
 echo.
-echo Abriendo pantalla del SCADA en su navegador predeterminado...
-start http://localhost:8080
-
-echo.
-echo Presione [Ctrl + C] en esta ventana cuando desee detener el sistema.
+echo El navegador se abrira automaticamente en http://localhost:8080 al iniciar.
+echo Presione [Ctrl + C] o cierre esta ventana cuando desee detener el sistema.
 echo ===============================================================================
 echo.
 
-node server/gateway.js
+node server/gateway.js --open
 pause
