@@ -284,8 +284,8 @@ wss.on('connection', (ws) => {
 const shouldOpenBrowser = process.argv.includes('--open') || process.env.OPEN_BROWSER === '1';
 function openBrowser(url) {
   if (!shouldOpenBrowser) return;
-  const cmd = process.platform === 'win32' ? `start "" "${url}"` : process.platform === 'darwin' ? `open "${url}"` : `xdg-open "${url}"`;
-  exec(cmd, () => {});
+  const cmd = process.platform === 'win32' ? `cmd /c start "" "${url}"` : process.platform === 'darwin' ? `open "${url}"` : `xdg-open "${url}"`;
+  try { execSync(cmd, { stdio: 'ignore' }); } catch { /* */ }
 }
 
 server.on('error', (err) => {
